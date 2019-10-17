@@ -246,7 +246,7 @@ public class AirMapMarker extends AirMapFeature {
     }
     // svg with level 100
     String svgSrc = "%3Csvg xmlns='http://www.w3.org/2000/svg' width='%%width%%' height='%%height%%' viewBox='0 0 210 300'%3E%3Cg id='_100' data-name='100'%3E%3Cpath class='cls-1' fill='%1$s' d='M194.67,80.76C184.16,42.18,148,13.51,105,13.51S25.84,42.18,15.33,80.76a88.07,88.07,0,0,0-3.09,23.14c0,13.62,2.3,28.63,6.49,44.1a281.12,281.12,0,0,0,28.59,67.24c15.93,27.23,36,51.54,57.68,67.25,21.65-15.71,41.76-40,57.68-67.25A281.12,281.12,0,0,0,191.27,148c4.18-15.47,6.49-30.48,6.49-44.1A88.07,88.07,0,0,0,194.67,80.76Z'/%3E%3Cpath fill='%2$s' class='cls-2' d='M207.64,80.76C197.46,34.77,155.43,0,105,0S12.54,34.77,2.36,80.76A99.59,99.59,0,0,0,0,102.31C0,116.64,2.26,132.12,6.38,148c5.79,22.32,15.26,45.43,27.33,67.24,18.83,34,44,64.94,71.29,84.76,27.32-19.82,52.46-50.71,71.29-84.76,12.07-21.81,21.54-44.92,27.33-67.24,4.12-15.88,6.38-31.36,6.38-45.69A99.59,99.59,0,0,0,207.64,80.76ZM191.27,148a281.12,281.12,0,0,1-28.59,67.24c-15.92,27.23-36,51.54-57.68,67.25-21.65-15.71-41.75-40-57.68-67.25A281.12,281.12,0,0,1,18.73,148c-4.19-15.47-6.49-30.48-6.49-44.1a88.07,88.07,0,0,1,3.09-23.14C25.84,42.18,62,13.51,105,13.51s79.16,28.67,89.67,67.25a88.07,88.07,0,0,1,3.09,23.14C197.76,117.52,195.45,132.53,191.27,148Z'/%3E%3C/g%3E%3C/svg%3E";
-    return "data:image/svg+xml," + svgSrc.replace("%1$s", bottomInnerEncoded).replace("%2$s", bottomInnerEncoded).replace("%%width%%", Double.toString(svgWidth)).replace("%%height%%", Double.toString(svgHeight));
+    return "data:image/svg+xml," + svgSrc.replace("%1$s", bottomInnerEncoded).replace("%2$s", bottomOutlineEncoded).replace("%%width%%", Double.toString(svgWidth)).replace("%%height%%", Double.toString(svgHeight));
 
   }
 
