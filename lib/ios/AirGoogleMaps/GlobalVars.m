@@ -21,13 +21,25 @@
   return instance;
 }
 
-- (UIImage *) getCFMarker:(NSString *)topOutline bottomOutline:(NSString *)bottomOutline topInner:(NSString *)topInner bottomInner:(NSString *)bottomInner level:(NSString *)level {
+- (UIImage *) getCFMarker:(NSString *)topOutline bottomOutline:(NSString *)bottomOutline topInner:(NSString *)topInner bottomInner:(NSString *)bottomInner level:(NSString *)level promotedColor:(NSString *) promotedColor {
     float markerLevel = [level floatValue];
 
     if (markerLevel == 0) {
       // svg with level 0
-      NSString *svgSrc = @"<svg xmlns='http://www.w3.org/2000/svg' width='25' height='68' viewBox='0 0 210 300'><g id='_100'><path fill='%2$@' d='M194.67,80.76C184.16,42.18,148,13.51,105,13.51S25.84,42.18,15.33,80.76a88.07,88.07,0,0,0-3.09,23.14c0,13.62,2.3,28.63,6.49,44.1a281.12,281.12,0,0,0,28.59,67.24c15.93,27.23,36,51.54,57.68,67.25,21.65-15.71,41.76-40,57.68-67.25A281.12,281.12,0,0,0,191.27,148c4.18-15.47,6.49-30.48,6.49-44.1A88.07,88.07,0,0,0,194.67,80.76Z'/><path fill='%1$@' d='M207.64,80.76C197.46,34.77,155.43,0,105,0S12.54,34.77,2.36,80.76A99.59,99.59,0,0,0,0,102.31C0,116.64,2.26,132.12,6.38,148c5.79,22.32,15.26,45.43,27.33,67.24,18.83,34,44,64.94,71.29,84.76,27.32-19.82,52.46-50.71,71.29-84.76,12.07-21.81,21.54-44.92,27.33-67.24,4.12-15.88,6.38-31.36,6.38-45.69A99.59,99.59,0,0,0,207.64,80.76Zm-45,134.48c-15.92,27.23-36,51.54-57.68,67.25-21.65-15.71-41.75-40-57.68-67.25A281.12,281.12,0,0,1,18.73,148c-4.19-15.47-6.49-30.48-6.49-44.1a88.07,88.07,0,0,1,3.09-23.14C25.84,42.18,62,13.51,105,13.51s79.16,28.67,89.67,67.25a88.07,88.07,0,0,1,3.09,23.14c0,13.62-2.31,28.63-6.49,44.1A281.12,281.12,0,0,1,162.68,215.24Z'/></g></svg>";
-      NSString *svgString = [NSString stringWithFormat:svgSrc, topOutline, topInner];
+      NSString *svgSrc = @"<svg xmlns='http://www.w3.org/2000/svg' width='25' height='68' viewBox='0 0 210 300'><path fill='%1$@' d='M186.873,99.819C177.278,64.59,144.263,38.412,105,38.412S32.722,64.59,23.127,99.819          c-1.876,6.884-2.824,13.991-2.824,21.126c0,12.437,2.102,26.143,5.929,40.266c5.992,21.511,14.767,42.153,26.103,61.396          c14.546,24.859,32.87,47.06,52.666,61.402c19.766-14.343,38.132-36.521,52.67-61.402c11.332-19.242,20.103-39.885,26.095-61.396          c3.819-14.123,5.932-27.829,5.932-40.266C189.696,113.811,188.753,106.703,186.873,99.819z'/><path fill='%2$@' d='M198.715,99.819C189.427,57.826,151.048,26.081,105,26.081c-46.045,0-84.424,31.746-93.719,73.739          c-1.431,6.46-2.153,13.059-2.153,19.677c0,13.08,2.063,27.218,5.827,41.715c5.284,20.38,13.932,41.479,24.953,61.396          C57.102,253.652,80.081,281.904,105,300c24.941-18.096,47.898-46.303,65.088-77.394c11.025-19.916,19.669-41.016,24.956-61.396          c3.761-14.497,5.828-28.635,5.828-41.715C200.872,112.878,200.152,106.279,198.715,99.819z M157.625,222.606          c-14.531,24.859-32.866,47.06-52.663,61.402c-19.766-14.343-38.12-36.521-52.665-61.402          c-11.321-19.242-20.085-39.885-26.065-61.396c-3.827-14.123-5.929-27.829-5.929-40.266c0-7.135,0.948-14.242,2.824-21.126          C32.722,64.59,65.737,38.412,105,38.412s72.278,26.178,81.873,61.407c1.88,6.884,2.823,13.991,2.823,21.126          c0,12.437-2.112,26.143-5.932,40.266c-5.992,21.511-14.763,42.153-26.095,61.396H157.625z'/>";
+        
+        
+      if (promotedColor) {
+          svgSrc = [svgSrc stringByAppendingString: @"<path fill='%3$@' d='M153.79,0c26.118,0,47.299,21.178,47.299,47.303c0,26.127-21.181,47.302-47.299,47.302        c-26.126,0-47.308-21.175-47.308-47.302C106.482,21.178,127.664,0,153.79,0z'/><path fill='#FFFFFF' d='M146.809,69.018c0-4.655,3.102-7.756,7.752-7.756c4.652,0,7.753,3.101,7.753,7.756 c0,4.651-3.101,7.752-7.753,7.752C149.91,76.77,146.809,73.669,146.809,69.018z M149.139,54.284l-2.33-36.447h13.184l-1.551,36.447 H149.139z'/>"];
+      }
+        
+
+      svgSrc = [svgSrc stringByAppendingString:@"</svg>"];
+      
+      NSString *svgString = [svgSrc stringByReplacingOccurrencesOfString:@"%1$@" withString:topInner];
+      svgString = [svgString stringByReplacingOccurrencesOfString:@"%2$@" withString:topOutline];
+      svgString = promotedColor ? [svgString stringByReplacingOccurrencesOfString:@"%3$@" withString:promotedColor] : svgString;
+      
       SVGKSource *source = [SVGKSourceString sourceFromContentsOfString:svgString];
       return [SVGKImage imageWithSource:source].UIImage;
     }
@@ -94,7 +106,10 @@
         NSString *topInner = jsonDictionary[@"topInner"];
         NSString *bottomInner = jsonDictionary[@"bottomInner"];
         NSString *level = jsonDictionary[@"level"];
-          newImage = [self getCFMarker:topOutline bottomOutline:bottomOutline topInner:topInner bottomInner:bottomInner level:level];
+        NSDictionary *promoted = (NSDictionary *)jsonDictionary[@"promoted"];
+        NSString *promotedColor = promoted[@"color"];
+        BOOL isPromoted = [promoted[@"isPromoted"] boolValue];
+        newImage = [self getCFMarker:topOutline bottomOutline:bottomOutline topInner:topInner bottomInner:bottomInner level:level promotedColor:(isPromoted ? promotedColor : nil)];
       }
     }
     dict[imageSrc] = newImage;
