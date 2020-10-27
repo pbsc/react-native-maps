@@ -207,11 +207,12 @@ public class AirMapMarker extends AirMapFeature {
     update(false);
   }
 
-  public String getCFSvg(Integer level,  String topOutline, String bottomOutline, String topInner, String bottomInner) {
+  public String getCFSvg(Integer level,  String topOutline, String bottomOutline, String topInner, String bottomInner, PromotedMarkerArgStructure promotedMarkerArg) {
     String topInnerEncoded = topInner.replace("#", "%23");
     String topOutlineEncoded = topOutline.replace("#", "%23");
     String bottomOutlineEncoded = bottomOutline.replace("#", "%23");
     String bottomInnerEncoded = bottomInner.replace("#", "%23");
+    String promotedEncoded = promotedMarkerArg.getColor().replace("#", "%23");
     final float scale = getResources().getDisplayMetrics().density;
     DisplayMetrics displayMetrics = new DisplayMetrics();
     ((WindowManager) getContext().getSystemService(Context.WINDOW_SERVICE))
@@ -223,31 +224,88 @@ public class AirMapMarker extends AirMapFeature {
     double svgHeight = 63.67 * scale;
     if (level == 0) {
       // svg with level 0
-      String svgSrc = "%3Csvg xmlns='http://www.w3.org/2000/svg' width='%%width%%' height='%%height%%' viewBox='0 0 210 300'%3E%3Cg id='_100'%3E%3Cpath fill='%2$s' d='M194.67,80.76C184.16,42.18,148,13.51,105,13.51S25.84,42.18,15.33,80.76a88.07,88.07,0,0,0-3.09,23.14c0,13.62,2.3,28.63,6.49,44.1a281.12,281.12,0,0,0,28.59,67.24c15.93,27.23,36,51.54,57.68,67.25,21.65-15.71,41.76-40,57.68-67.25A281.12,281.12,0,0,0,191.27,148c4.18-15.47,6.49-30.48,6.49-44.1A88.07,88.07,0,0,0,194.67,80.76Z'/%3E%3Cpath fill='%1$s' d='M207.64,80.76C197.46,34.77,155.43,0,105,0S12.54,34.77,2.36,80.76A99.59,99.59,0,0,0,0,102.31C0,116.64,2.26,132.12,6.38,148c5.79,22.32,15.26,45.43,27.33,67.24,18.83,34,44,64.94,71.29,84.76,27.32-19.82,52.46-50.71,71.29-84.76,12.07-21.81,21.54-44.92,27.33-67.24,4.12-15.88,6.38-31.36,6.38-45.69A99.59,99.59,0,0,0,207.64,80.76Zm-45,134.48c-15.92,27.23-36,51.54-57.68,67.25-21.65-15.71-41.75-40-57.68-67.25A281.12,281.12,0,0,1,18.73,148c-4.19-15.47-6.49-30.48-6.49-44.1a88.07,88.07,0,0,1,3.09-23.14C25.84,42.18,62,13.51,105,13.51s79.16,28.67,89.67,67.25a88.07,88.07,0,0,1,3.09,23.14c0,13.62-2.31,28.63-6.49,44.1A281.12,281.12,0,0,1,162.68,215.24Z'/%3E%3C/g%3E%3C/svg%3E";
-      return "data:image/svg+xml," + svgSrc.replace("%2$s", topInnerEncoded).replace("%1$s", topOutlineEncoded).replace("%%width%%", Double.toString(svgWidth)).replace("%%height%%", Double.toString(svgHeight));
+      String svgSrc = "%3Csvg xmlns='http://www.w3.org/2000/svg' width='%%width%%' height='%%height%%' viewBox='0 0 210 300'%3E%3Cpath fill='%2$s' d='M186.873,99.819C177.278,64.59,144.263,38.412,105,38.412S32.722,64.59,23.127,99.819 c-1.876,6.884-2.824,13.991-2.824,21.126c0,12.437,2.102,26.143,5.929,40.266c5.992,21.511,14.767,42.153,26.103,61.396 c14.546,24.859,32.87,47.06,52.666,61.402c19.766-14.343,38.132-36.521,52.67-61.402c11.332-19.242,20.103-39.885,26.095-61.396 c3.819-14.123,5.932-27.829,5.932-40.266C189.696,113.811,188.753,106.703,186.873,99.819z' /%3E%3Cpath fill='%1$s' d='M198.715,99.819C189.427,57.826,151.048,26.081,105,26.081c-46.045,0-84.424,31.746-93.719,73.739 c-1.431,6.46-2.153,13.059-2.153,19.677c0,13.08,2.063,27.218,5.827,41.715c5.284,20.38,13.932,41.479,24.953,61.396 C57.102,253.652,80.081,281.904,105,300c24.941-18.096,47.898-46.303,65.088-77.394c11.025-19.916,19.669-41.016,24.956-61.396 c3.761-14.497,5.828-28.635,5.828-41.715C200.872,112.878,200.152,106.279,198.715,99.819z M157.625,222.606 c-14.531,24.859-32.866,47.06-52.663,61.402c-19.766-14.343-38.12-36.521-52.665-61.402 c-11.321-19.242-20.085-39.885-26.065-61.396c-3.827-14.123-5.929-27.829-5.929-40.266c0-7.135,0.948-14.242,2.824-21.126 C32.722,64.59,65.737,38.412,105,38.412s72.278,26.178,81.873,61.407c1.88,6.884,2.823,13.991,2.823,21.126 c0,12.437-2.112,26.143-5.932,40.266c-5.992,21.511-14.763,42.153-26.095,61.396H157.625z' /%3E";
+
+      if (promotedMarkerArg.getIsPromoted())
+      {
+        svgSrc += getCFPromotionIconSVG();
+      }
+
+      svgSrc += "%3C/svg%3E";
+
+      return "data:image/svg+xml," + svgSrc.replace("%2$s", topInnerEncoded).replace("%1$s", topOutlineEncoded)
+              .replace("%%width%%", Double.toString(svgWidth)).replace("%%height%%", Double.toString(svgHeight))
+              .replace("%%promotedColor%%", promotedEncoded);
     }
 
     if (level > 0 && level <= 37) {
       // svg with level 25
-      String svgSrc = "%3Csvg xmlns='http://www.w3.org/2000/svg' width='%%width%%' height='%%height%%' viewBox='0 0 210 300'%3E%3Cg id='_100' data-name='100'%3E%3Cpath fill='%1$s' class='cls-1' d='M194.67,80.76C184.16,42.18,148,13.51,105,13.51S25.84,42.18,15.33,80.76a88.07,88.07,0,0,0-3.09,23.14c0,13.62,2.3,28.63,6.49,44.1a281.12,281.12,0,0,0,28.59,67.24H162.68A281.12,281.12,0,0,0,191.27,148c4.18-15.47,6.49-30.48,6.49-44.1A88.07,88.07,0,0,0,194.67,80.76Z'/%3E%3Cpath fill='%2$s' class='cls-2' d='M105,282.49c21.65-15.71,41.76-40,57.68-67.25H47.32C63.25,242.47,83.35,266.78,105,282.49Z'/%3E%3Cpath fill='%3$s' class='cls-3' d='M105,282.49c-21.65-15.71-41.75-40-57.68-67.25H33.71c18.83,34,44,64.94,71.29,84.76,27.32-19.82,52.46-50.71,71.29-84.76H162.68C146.76,242.47,126.65,266.78,105,282.49Z'/%3E%3Cpath fill='%4$s' d='M207.64,80.76C197.46,34.77,155.43,0,105,0S12.54,34.77,2.36,80.76A99.59,99.59,0,0,0,0,102.31C0,116.64,2.26,132.12,6.38,148c5.79,22.32,15.26,45.43,27.33,67.24H47.32A281.12,281.12,0,0,1,18.73,148c-4.19-15.47-6.49-30.48-6.49-44.1a88.07,88.07,0,0,1,3.09-23.14C25.84,42.18,62,13.51,105,13.51s79.16,28.67,89.67,67.25a88.07,88.07,0,0,1,3.09,23.14c0,13.62-2.31,28.63-6.49,44.1a281.12,281.12,0,0,1-28.59,67.24h13.61c12.07-21.81,21.54-44.92,27.33-67.24,4.12-15.88,6.38-31.36,6.38-45.69A99.59,99.59,0,0,0,207.64,80.76Z'/%3E%3C/g%3E%3C/svg%3E";
-      return "data:image/svg+xml," + svgSrc.replace("%1$s", topInnerEncoded).replace("%2$s", bottomInner).replace("%3$s", bottomOutlineEncoded).replace("%4$s", topOutlineEncoded).replace("%%width%%", Double.toString(svgWidth)).replace("%%height%%", Double.toString(svgHeight));
+      String svgSrc = "%3Csvg xmlns='http://www.w3.org/2000/svg' width='%%width%%' height='%%height%%' viewBox='0 0 210 300'%3E%3Cpath fill='%1$s' d='M186.873,99.819C177.278,64.59,144.263,38.412,105,38.412S32.722,64.59,23.127,99.819 c-1.876,6.884-2.824,13.991-2.824,21.126c0,12.437,2.102,26.143,5.929,40.266c5.992,21.511,14.767,42.153,26.103,61.396H157.67 c11.332-19.242,20.103-39.885,26.095-61.396c3.819-14.123,5.932-27.829,5.932-40.266 C189.696,113.811,188.753,106.703,186.873,99.819z'/%3E%3Cpath fill='%2$s' d='M105,284.009c19.766-14.343,38.132-36.521,52.67-61.402H52.334C66.88,247.466,85.233,269.666,105,284.009z'/%3E%3Cpath fill='%3$s' d='M105,284.009c-19.767-14.343-38.12-36.521-52.666-61.402H39.908C57.102,253.652,80.081,281.904,105,300 c24.941-18.096,47.898-46.303,65.088-77.394H157.67C143.132,247.466,124.766,269.666,105,284.009z'/%3E%3Cpath fill='%4$s' d='M198.715,99.819C189.427,57.826,151.048,26.081,105,26.081c-46.045,0-84.424,31.746-93.719,73.739 c-1.431,6.46-2.153,13.059-2.153,19.677c0,13.08,2.063,27.218,5.827,41.715c5.284,20.38,13.932,41.479,24.953,61.396h12.426 c-11.336-19.242-20.11-39.885-26.103-61.396c-3.827-14.123-5.929-27.829-5.929-40.266c0-7.135,0.948-14.242,2.824-21.126 C32.722,64.59,65.737,38.412,105,38.412s72.278,26.178,81.873,61.407c1.88,6.884,2.823,13.991,2.823,21.126 c0,12.437-2.112,26.143-5.932,40.266c-5.992,21.511-14.763,42.153-26.095,61.396h12.418c11.025-19.916,19.669-41.016,24.956-61.396 c3.761-14.497,5.828-28.635,5.828-41.715C200.872,112.878,200.152,106.279,198.715,99.819z'/%3E";
+
+      if (promotedMarkerArg.getIsPromoted())
+      {
+        svgSrc += getCFPromotionIconSVG();
+      }
+
+      svgSrc += "%3C/svg%3E";
+
+      return "data:image/svg+xml," + svgSrc.replace("%1$s", topInnerEncoded).replace("%2$s", bottomInnerEncoded)
+              .replace("%3$s", bottomOutlineEncoded).replace("%4$s", topOutlineEncoded)
+              .replace("%%width%%", Double.toString(svgWidth)).replace("%%height%%", Double.toString(svgHeight))
+              .replace("%%promotedColor%%", promotedEncoded);
     }
 
     if (level > 37 && level <= 62) {
       // svg with level 50
-      String svgSrc = "%3Csvg xmlns='http://www.w3.org/2000/svg' width='%%width%%' height='%%height%%' viewBox='0 0 210 300'%3E%3Cg id='_100' data-name='100'%3E%3Cpath class='cls-1' fill='%1$s' d='M194.67,81c-10.43-38.6-46.48-67.34-89.52-67.44S25.93,42,15.33,80.56a88.09,88.09,0,0,0-3.14,23.14c0,13.62,2.24,28.63,6.39,44.11l172.55.38c4.21-15.46,6.55-30.47,6.58-44.09A87.76,87.76,0,0,0,194.67,81Z'/%3E%3Cpath class='cls-2' fill='%2$s' d='M18.73,148a281.12,281.12,0,0,0,28.59,67.24c15.93,27.23,36,51.54,57.68,67.25,21.65-15.71,41.76-40,57.68-67.25A281.12,281.12,0,0,0,191.27,148Z'/%3E%3Cpath class='cls-3' fill='%3$s' d='M207.64,80.76C197.46,34.77,155.43,0,105,0S12.54,34.77,2.36,80.76A99.59,99.59,0,0,0,0,102.31C0,116.64,2.26,132.12,6.38,148H18.73c-4.19-15.47-6.49-30.48-6.49-44.1a88.07,88.07,0,0,1,3.09-23.14C25.84,42.18,62,13.51,105,13.51s79.16,28.67,89.67,67.25a88.07,88.07,0,0,1,3.09,23.14c0,13.62-2.31,28.63-6.49,44.1h12.35c4.12-15.88,6.38-31.36,6.38-45.69A99.59,99.59,0,0,0,207.64,80.76Z'/%3E%3Cpath fill='%4$s' class='cls-4' d='M191.27,148a281.12,281.12,0,0,1-28.59,67.24c-15.92,27.23-36,51.54-57.68,67.25-21.65-15.71-41.75-40-57.68-67.25A281.12,281.12,0,0,1,18.73,148H6.38c5.79,22.32,15.26,45.43,27.33,67.24,18.83,34,44,64.94,71.29,84.76,27.32-19.82,52.46-50.71,71.29-84.76,12.07-21.81,21.54-44.92,27.33-67.24Z'/%3E%3C/g%3E%3C/svg%3E";
-      return "data:image/svg+xml," + svgSrc.replace("%1$s", topInnerEncoded).replace("%2$s", bottomInnerEncoded).replace("%3$s", topOutlineEncoded).replace("%4$s", bottomOutlineEncoded).replace("%%width%%", Double.toString(svgWidth)).replace("%%height%%", Double.toString(svgHeight));
+      String svgSrc = "%3Csvg xmlns='http://www.w3.org/2000/svg' width='%%width%%' height='%%height%%' viewBox='0 0 210 300'%3E%3Cpath fill='%1$s' d='M186.873,100.037c-9.52-35.244-42.438-61.486-81.734-61.576c-39.3-0.094-72.335,25.969-82.012,61.175 c-1.892,6.884-2.854,13.987-2.869,21.13c0,12.433,2.045,26.139,5.835,40.273l157.552,0.348c3.843-14.119,5.978-27.821,6.007-40.258 C189.667,114.006,188.738,106.912,186.873,100.037z'/%3E%3Cpath fill='%2$s' d='M26.231,161.211c5.992,21.511,14.767,42.153,26.103,61.396c14.546,24.859,32.87,47.06,52.666,61.402 c19.766-14.343,38.132-36.521,52.67-61.402c11.332-19.242,20.103-39.885,26.095-61.396H26.231z'/%3E%3Cpath fill='%3$s' d='M198.715,99.819C189.427,57.826,151.048,26.081,105,26.081c-46.045,0-84.424,31.746-93.719,73.739 c-1.431,6.46-2.153,13.059-2.153,19.677c0,13.08,2.063,27.218,5.827,41.715h11.276c-3.827-14.123-5.929-27.829-5.929-40.266 c0-7.135,0.948-14.242,2.824-21.126C32.722,64.59,65.737,38.412,105,38.412s72.278,26.178,81.873,61.407 c1.88,6.884,2.823,13.991,2.823,21.126c0,12.437-2.112,26.143-5.932,40.266h11.279c3.761-14.497,5.828-28.635,5.828-41.715 C200.872,112.878,200.152,106.279,198.715,99.819z'/%3E%3Cpath fill='%4$s' d='M183.765,161.211c-5.992,21.511-14.763,42.153-26.095,61.396c-14.538,24.859-32.874,47.06-52.67,61.402 c-19.767-14.343-38.12-36.521-52.666-61.402c-11.336-19.242-20.11-39.885-26.103-61.396H14.955 c5.284,20.38,13.932,41.479,24.953,61.396C57.102,253.652,80.081,281.904,105,300c24.941-18.096,47.898-46.303,65.088-77.394 c11.025-19.916,19.669-41.016,24.956-61.396H183.765z'/%3E";
+
+      if (promotedMarkerArg.getIsPromoted())
+      {
+        svgSrc += getCFPromotionIconSVG();
+      }
+
+      svgSrc += "%3C/svg%3E";
+
+      return "data:image/svg+xml," + svgSrc.replace("%1$s", topInnerEncoded).replace("%2$s", bottomInnerEncoded)
+              .replace("%3$s", topOutlineEncoded).replace("%4$s", bottomOutlineEncoded)
+              .replace("%%width%%", Double.toString(svgWidth)).replace("%%height%%", Double.toString(svgHeight))
+              .replace("%%promotedColor%%", promotedEncoded);
     }
 
     if (level > 62 && level <= 88) {
       // svg with level 75
-      String svgSrc = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='%%width%%' height='%%height%%' viewBox='0 0 210 300'%3E%3Cg id='_100' data-name='100'%3E%3Cpath class='cls-1' fill='%1$s' d='M105,13.51c-43,0-79.16,28.67-89.67,67.25H194.67C184.16,42.18,148,13.51,105,13.51Z'/%3E%3Cpath fill='%2$s' class='cls-2' d='M194.67,80.76H15.33a88.07,88.07,0,0,0-3.09,23.14c0,13.62,2.3,28.63,6.49,44.1a281.12,281.12,0,0,0,28.59,67.24c15.93,27.23,36,51.54,57.68,67.25,21.65-15.71,41.76-40,57.68-67.25A281.12,281.12,0,0,0,191.27,148c4.18-15.47,6.49-30.48,6.49-44.1A88.07,88.07,0,0,0,194.67,80.76Z'/%3E%3Cpath fill='%3$s' class='cls-3' d='M105,13.51c43,0,79.16,28.67,89.67,67.25h13C197.46,34.77,155.43,0,105,0S12.54,34.77,2.36,80.76h13C25.84,42.18,62,13.51,105,13.51Z'/%3E%3Cpath fill='%4$s' class='cls-4' d='M207.64,80.76h-13a88.07,88.07,0,0,1,3.09,23.14c0,13.62-2.31,28.63-6.49,44.1a281.12,281.12,0,0,1-28.59,67.24c-15.92,27.23-36,51.54-57.68,67.25-21.65-15.71-41.75-40-57.68-67.25A281.12,281.12,0,0,1,18.73,148c-4.19-15.47-6.49-30.48-6.49-44.1a88.07,88.07,0,0,1,3.09-23.14h-13A99.59,99.59,0,0,0,0,102.31C0,116.64,2.26,132.12,6.38,148c5.79,22.32,15.26,45.43,27.33,67.24,18.83,34,44,64.94,71.29,84.76,27.32-19.82,52.46-50.71,71.29-84.76,12.07-21.81,21.54-44.92,27.33-67.24,4.12-15.88,6.38-31.36,6.38-45.69A99.59,99.59,0,0,0,207.64,80.76Z'/%3E%3C/g%3E%3C/svg%3E";
-      return svgSrc.replace("%1$s", topInnerEncoded).replace("%2$s", bottomInnerEncoded).replace("%3$s", topOutlineEncoded).replace("%4$s", bottomOutlineEncoded).replace("%%width%%", Double.toString(svgWidth)).replace("%%height%%", Double.toString(svgHeight));
-    }
-    // svg with level 100
-    String svgSrc = "%3Csvg xmlns='http://www.w3.org/2000/svg' width='%%width%%' height='%%height%%' viewBox='0 0 210 300'%3E%3Cg id='_100' data-name='100'%3E%3Cpath class='cls-1' fill='%1$s' d='M194.67,80.76C184.16,42.18,148,13.51,105,13.51S25.84,42.18,15.33,80.76a88.07,88.07,0,0,0-3.09,23.14c0,13.62,2.3,28.63,6.49,44.1a281.12,281.12,0,0,0,28.59,67.24c15.93,27.23,36,51.54,57.68,67.25,21.65-15.71,41.76-40,57.68-67.25A281.12,281.12,0,0,0,191.27,148c4.18-15.47,6.49-30.48,6.49-44.1A88.07,88.07,0,0,0,194.67,80.76Z'/%3E%3Cpath fill='%2$s' class='cls-2' d='M207.64,80.76C197.46,34.77,155.43,0,105,0S12.54,34.77,2.36,80.76A99.59,99.59,0,0,0,0,102.31C0,116.64,2.26,132.12,6.38,148c5.79,22.32,15.26,45.43,27.33,67.24,18.83,34,44,64.94,71.29,84.76,27.32-19.82,52.46-50.71,71.29-84.76,12.07-21.81,21.54-44.92,27.33-67.24,4.12-15.88,6.38-31.36,6.38-45.69A99.59,99.59,0,0,0,207.64,80.76ZM191.27,148a281.12,281.12,0,0,1-28.59,67.24c-15.92,27.23-36,51.54-57.68,67.25-21.65-15.71-41.75-40-57.68-67.25A281.12,281.12,0,0,1,18.73,148c-4.19-15.47-6.49-30.48-6.49-44.1a88.07,88.07,0,0,1,3.09-23.14C25.84,42.18,62,13.51,105,13.51s79.16,28.67,89.67,67.25a88.07,88.07,0,0,1,3.09,23.14C197.76,117.52,195.45,132.53,191.27,148Z'/%3E%3C/g%3E%3C/svg%3E";
-    return "data:image/svg+xml," + svgSrc.replace("%1$s", bottomInnerEncoded).replace("%2$s", bottomOutlineEncoded).replace("%%width%%", Double.toString(svgWidth)).replace("%%height%%", Double.toString(svgHeight));
+      String svgSrc = "%3Csvg xmlns='http://www.w3.org/2000/svg' width='%%width%%' height='%%height%%' viewBox='0 0 210 300'%3E%3Cpath fill='%1$s' d='M104.998,38.416c-39.262,0-72.276,26.179-81.87,61.405h163.745 C177.273,64.595,144.258,38.416,104.998,38.416z'/%3E%3Cpath fill='%2$s' d='M186.873,99.821H23.128c-1.877,6.885-2.824,13.99-2.824,21.125c0,12.438,2.103,26.145,5.93,40.267 c5.991,21.512,14.765,42.15,26.101,61.392c14.545,24.86,32.868,47.062,52.664,61.403c19.765-14.341,38.133-36.519,52.67-61.403 c11.336-19.241,20.105-39.88,26.096-61.392c3.816-14.122,5.93-27.828,5.93-40.267C189.693,113.812,188.75,106.706,186.873,99.821z' /%3E%3Cpath fill='%3$s' d='M104.998,38.416c39.26,0,72.275,26.179,81.875,61.405h11.873c-9.32-41.991-47.699-73.738-93.748-73.738 c-46.042,0-84.421,31.747-93.715,73.738h11.871C32.722,64.595,65.736,38.416,104.998,38.416z'/%3E%3Cpath fill='%4$s' d='M198.715,99.821h-11.867c1.871,6.885,2.816,13.99,2.816,21.125c0,12.438-2.109,26.145-5.924,40.267 c-5.99,21.512-14.768,42.15-26.104,61.392c-14.535,24.86-32.874,47.062-52.664,61.403c-19.771-14.341-38.118-36.519-52.664-61.403 c-11.326-19.241-20.094-39.88-26.075-61.392c-3.827-14.122-5.93-27.828-5.93-40.267c0-7.135,0.947-14.24,2.824-21.125H11.256 c-1.424,6.461-2.133,13.059-2.127,19.677c0,13.079,2.063,27.219,5.827,41.715c5.284,20.381,13.933,41.48,24.955,61.392 C57.103,253.65,80.079,281.905,104.998,300c24.944-18.095,47.896-46.301,65.09-77.396c11.025-19.911,19.668-41.011,24.951-61.392 c3.76-14.496,5.832-28.636,5.832-41.715C200.871,112.88,200.152,106.282,198.715,99.821z'/%3E";
 
+      if (promotedMarkerArg.getIsPromoted())
+      {
+        svgSrc += getCFPromotionIconSVG();
+      }
+
+      svgSrc += "%3C/svg%3E";
+
+      return "data:image/svg+xml," + svgSrc.replace("%1$s", topInnerEncoded).replace("%2$s", bottomInnerEncoded)
+              .replace("%3$s", topOutlineEncoded).replace("%4$s", bottomOutlineEncoded)
+              .replace("%%width%%", Double.toString(svgWidth)).replace("%%height%%", Double.toString(svgHeight))
+              .replace("%%promotedColor%%", promotedEncoded);
+    }
+    
+    // svg with level 100
+    String svgSrc = "%3Csvg xmlns='http://www.w3.org/2000/svg' width='%%width%%' height='%%height%%' viewBox='0 0 210 300'%3E%3Cpath fill='%1$s' d='M186.875,99.815c-9.595-35.23-42.611-61.408-81.874-61.408s-72.28,26.178-81.875,61.408 c-1.877,6.885-2.824,13.992-2.824,21.126c0,12.438,2.102,26.144,5.93,40.267c5.991,21.512,14.766,42.155,26.103,61.396 c14.546,24.86,32.87,47.061,52.667,61.404c19.766-14.344,38.132-36.521,52.67-61.404c11.332-19.241,20.104-39.885,26.096-61.396 c3.82-14.123,5.932-27.829,5.932-40.267C189.698,113.808,188.755,106.7,186.875,99.815z' /%3E%3Cpath fill='%2$s' d='M198.717,99.815c-9.288-41.994-47.666-73.74-93.716-73.74c-46.047,0-84.425,31.746-93.721,73.74 c-1.43,6.461-2.153,13.06-2.153,19.677c0,13.081,2.064,27.219,5.827,41.716c5.284,20.381,13.931,41.479,24.954,61.396 c17.193,31.046,40.173,59.3,65.093,77.396c24.941-18.096,47.899-46.304,65.088-77.396c11.026-19.917,19.669-41.016,24.958-61.396 c3.76-14.497,5.826-28.635,5.826-41.716C200.873,112.875,200.154,106.276,198.717,99.815z M183.767,161.208 c-5.992,21.512-14.764,42.155-26.096,61.396c-14.538,24.86-32.874,47.061-52.67,61.404c-19.767-14.344-38.121-36.521-52.667-61.404 c-11.337-19.241-20.111-39.885-26.103-61.396c-3.828-14.123-5.93-27.829-5.93-40.267c0-7.134,0.947-14.241,2.824-21.126 c9.595-35.23,42.612-61.408,81.875-61.408s72.279,26.178,81.874,61.408c1.88,6.885,2.823,13.992,2.823,21.126 C189.698,133.379,187.587,147.085,183.767,161.208z' /%3E";
+
+    if (promotedMarkerArg.getIsPromoted())
+    {
+      svgSrc += getCFPromotionIconSVG();
+    }
+
+    svgSrc += "%3C/svg%3E";
+
+    return "data:image/svg+xml," + svgSrc.replace("%1$s", bottomInnerEncoded).replace("%2$s", bottomOutlineEncoded)
+            .replace("%%width%%", Double.toString(svgWidth)).replace("%%height%%", Double.toString(svgHeight))
+            .replace("%%promotedColor%%", promotedEncoded);
+  }
+
+  private String getCFPromotionIconSVG() {
+    return  "%3Cpath fill='%%promotedColor%%' d='M153.79,0c26.118,0,47.299,21.178,47.299,47.303c0,26.127-21.181,47.302-47.299,47.302 c-26.126,0-47.308-21.175-47.308-47.302C106.482,21.178,127.664,0,153.79,0z'/%3E%3Cpath fill='%23FFFFFF' d='M146.809,69.018c0-4.655,3.102-7.756,7.752-7.756c4.652,0,7.753,3.101,7.753,7.756 c0,4.651-3.101,7.752-7.753,7.752C149.91,76.77,146.809,73.669,146.809,69.018z M149.139,54.284l-2.33-36.447h13.184l-1.551,36.447 H149.139z'/%3E";
   }
 
   public void setSnippet(String snippet) {
@@ -463,6 +521,28 @@ public class AirMapMarker extends AirMapFeature {
     }
   }
 
+  static class PromotedMarkerArgStructure
+  {
+    public PromotedMarkerArgStructure(boolean isPromoted, String color)
+    {
+      this.isPromoted = isPromoted;
+      this.color = color;
+    }
+    private boolean isPromoted;
+
+    private String color;
+
+    public boolean getIsPromoted()
+    {
+      return isPromoted;
+    }
+
+    public String getColor()
+    {
+      return color;
+    }
+  }
+
   public static class SvgPictureDrawable extends PictureDrawable {
 
     private final SVG mSvg;
@@ -536,7 +616,12 @@ public class AirMapMarker extends AirMapFeature {
         String  topInner = jsonObj.getString("topInner");
         String bottomInner = jsonObj.getString("bottomInner");
         String level = jsonObj.getString("level");
-        String svgDataUrI = getCFSvg(Math.round(Float.parseFloat(level)), topOutline, bottomOutline, topInner, bottomInner);
+        JSONObject promoted = jsonObj.getJSONObject("promoted");
+        Boolean isPromoted = new Boolean(promoted.getString("isPromoted"));
+        String promotedMarkerColor = promoted.getString("color");
+        PromotedMarkerArgStructure promotedMarkerArgs = new PromotedMarkerArgStructure(isPromoted, promotedMarkerColor) ;
+        
+        String svgDataUrI = getCFSvg(Math.round(Float.parseFloat(level)), topOutline, bottomOutline, topInner, bottomInner, promotedMarkerArgs);
         Log.d("JSONString", svgDataUrI);
         ImageRequest imageRequest = ImageRequestBuilder
                 .newBuilderWithSource(Uri.parse(svgDataUrI))
