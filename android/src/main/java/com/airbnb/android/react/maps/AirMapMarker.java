@@ -228,7 +228,7 @@ public class AirMapMarker extends AirMapFeature {
 
       if (promotedMarkerArg.getIsPromoted())
       {
-        svgSrc += "%3Cpath fill='%%promotedColor%%' d='M153.79,0c26.118,0,47.299,21.178,47.299,47.303c0,26.127-21.181,47.302-47.299,47.302 c-26.126,0-47.308-21.175-47.308-47.302C106.482,21.178,127.664,0,153.79,0z'/%3E%3Cpath fill='%23FFFFFF' d='M146.809,69.018c0-4.655,3.102-7.756,7.752-7.756c4.652,0,7.753,3.101,7.753,7.756 c0,4.651-3.101,7.752-7.753,7.752C149.91,76.77,146.809,73.669,146.809,69.018z M149.139,54.284l-2.33-36.447h13.184l-1.551,36.447 H149.139z'/%3E";
+        svgSrc += getCFPromotionIconSVG();
       }
 
       svgSrc += "%3C/svg%3E";
@@ -244,7 +244,7 @@ public class AirMapMarker extends AirMapFeature {
 
       if (promotedMarkerArg.getIsPromoted())
       {
-        svgSrc += "%3Cpath fill='%%promotedColor%%' d='M153.79,0c26.118,0,47.299,21.178,47.299,47.303c0,26.127-21.181,47.302-47.299,47.302 c-26.126,0-47.308-21.175-47.308-47.302C106.482,21.178,127.664,0,153.79,0z'/%3E%3Cpath fill='%23FFFFFF' d='M146.809,69.018c0-4.655,3.102-7.756,7.752-7.756c4.652,0,7.753,3.101,7.753,7.756 c0,4.651-3.101,7.752-7.753,7.752C149.91,76.77,146.809,73.669,146.809,69.018z M149.139,54.284l-2.33-36.447h13.184l-1.551,36.447 H149.139z'/%3E";
+        svgSrc += getCFPromotionIconSVG();
       }
 
       svgSrc += "%3C/svg%3E";
@@ -261,7 +261,7 @@ public class AirMapMarker extends AirMapFeature {
 
       if (promotedMarkerArg.getIsPromoted())
       {
-        svgSrc += "%3Cpath fill='%%promotedColor%%' d='M153.79,0c26.118,0,47.299,21.178,47.299,47.303c0,26.127-21.181,47.302-47.299,47.302 c-26.126,0-47.308-21.175-47.308-47.302C106.482,21.178,127.664,0,153.79,0z'/%3E%3Cpath fill='%23FFFFFF' d='M146.809,69.018c0-4.655,3.102-7.756,7.752-7.756c4.652,0,7.753,3.101,7.753,7.756 c0,4.651-3.101,7.752-7.753,7.752C149.91,76.77,146.809,73.669,146.809,69.018z M149.139,54.284l-2.33-36.447h13.184l-1.551,36.447 H149.139z'/%3E";
+        svgSrc += getCFPromotionIconSVG();
       }
 
       svgSrc += "%3C/svg%3E";
@@ -278,7 +278,7 @@ public class AirMapMarker extends AirMapFeature {
 
       if (promotedMarkerArg.getIsPromoted())
       {
-        svgSrc += "%3Cpath fill='%%promotedColor%%' d='M153.79,0c26.118,0,47.299,21.178,47.299,47.303c0,26.127-21.181,47.302-47.299,47.302 c-26.126,0-47.308-21.175-47.308-47.302C106.482,21.178,127.664,0,153.79,0z'/%3E%3Cpath fill='%23FFFFFF' d='M146.809,69.018c0-4.655,3.102-7.756,7.752-7.756c4.652,0,7.753,3.101,7.753,7.756 c0,4.651-3.101,7.752-7.753,7.752C149.91,76.77,146.809,73.669,146.809,69.018z M149.139,54.284l-2.33-36.447h13.184l-1.551,36.447 H149.139z'/%3E";
+        svgSrc += getCFPromotionIconSVG();
       }
 
       svgSrc += "%3C/svg%3E";
@@ -294,7 +294,7 @@ public class AirMapMarker extends AirMapFeature {
 
     if (promotedMarkerArg.getIsPromoted())
     {
-      svgSrc += "%3Cpath fill='%%promotedColor%%' d='M153.79,0c26.118,0,47.299,21.178,47.299,47.303c0,26.127-21.181,47.302-47.299,47.302 c-26.126,0-47.308-21.175-47.308-47.302C106.482,21.178,127.664,0,153.79,0z'/%3E%3Cpath fill='%23FFFFFF' d='M146.809,69.018c0-4.655,3.102-7.756,7.752-7.756c4.652,0,7.753,3.101,7.753,7.756 c0,4.651-3.101,7.752-7.753,7.752C149.91,76.77,146.809,73.669,146.809,69.018z M149.139,54.284l-2.33-36.447h13.184l-1.551,36.447 H149.139z'/%3E";
+      svgSrc += getCFPromotionIconSVG();
     }
 
     svgSrc += "%3C/svg%3E";
@@ -302,6 +302,10 @@ public class AirMapMarker extends AirMapFeature {
     return "data:image/svg+xml," + svgSrc.replace("%1$s", bottomInnerEncoded).replace("%2$s", bottomOutlineEncoded)
             .replace("%%width%%", Double.toString(svgWidth)).replace("%%height%%", Double.toString(svgHeight))
             .replace("%%promotedColor%%", promotedEncoded);
+  }
+
+  private String getCFPromotionIconSVG() {
+    return  "%3Cpath fill='%%promotedColor%%' d='M153.79,0c26.118,0,47.299,21.178,47.299,47.303c0,26.127-21.181,47.302-47.299,47.302 c-26.126,0-47.308-21.175-47.308-47.302C106.482,21.178,127.664,0,153.79,0z'/%3E%3Cpath fill='%23FFFFFF' d='M146.809,69.018c0-4.655,3.102-7.756,7.752-7.756c4.652,0,7.753,3.101,7.753,7.756 c0,4.651-3.101,7.752-7.753,7.752C149.91,76.77,146.809,73.669,146.809,69.018z M149.139,54.284l-2.33-36.447h13.184l-1.551,36.447 H149.139z'/%3E";
   }
 
   public void setSnippet(String snippet) {
