@@ -99,53 +99,53 @@ public class AirMapMarker extends AirMapFeature {
   private final DraweeHolder<?> logoHolder;
   private DataSource<CloseableReference<CloseableImage>> dataSource;
   private final ControllerListener<ImageInfo> mLogoControllerListener =
-      new BaseControllerListener<ImageInfo>() {
-        @Override
-        public void onFinalImageSet(
-            String id,
-            @Nullable final ImageInfo imageInfo,
-            @Nullable Animatable animatable) {
-          CloseableReference<CloseableImage> imageReference = null;
-          try {
-            imageReference = dataSource.getResult();
-            if (imageReference != null) {
-              CloseableImage image = imageReference.get();
-              if (image != null && image instanceof CloseableStaticBitmap) {
-                CloseableStaticBitmap closeableStaticBitmap = (CloseableStaticBitmap) image;
-                Bitmap bitmap = closeableStaticBitmap.getUnderlyingBitmap();
-                if (bitmap != null) {
-                  bitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true);
-                  iconBitmap = bitmap;
-                  iconBitmapDescriptor = BitmapDescriptorFactory.fromBitmap(bitmap);
+          new BaseControllerListener<ImageInfo>() {
+            @Override
+            public void onFinalImageSet(
+                    String id,
+                    @Nullable final ImageInfo imageInfo,
+                    @Nullable Animatable animatable) {
+              CloseableReference<CloseableImage> imageReference = null;
+              try {
+                imageReference = dataSource.getResult();
+                if (imageReference != null) {
+                  CloseableImage image = imageReference.get();
+                  if (image != null && image instanceof CloseableStaticBitmap) {
+                    CloseableStaticBitmap closeableStaticBitmap = (CloseableStaticBitmap) image;
+                    Bitmap bitmap = closeableStaticBitmap.getUnderlyingBitmap();
+                    if (bitmap != null) {
+                      bitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true);
+                      iconBitmap = bitmap;
+                      iconBitmapDescriptor = BitmapDescriptorFactory.fromBitmap(bitmap);
+                    }
+                  }
+                  if(image != null && image instanceof CloseableSvgImage) {
+                    SVG svgImage = ((CloseableSvgImage) image).getSvg();
+                    Bitmap  newBM = Bitmap.createBitmap((int) Math.ceil(svgImage.getDocumentWidth()),
+                            (int) Math.ceil(svgImage.getDocumentHeight()),
+                            Bitmap.Config.ARGB_8888);
+                    Canvas  bmcanvas = new Canvas(newBM);
+                    svgImage.renderToCanvas(bmcanvas);
+                    if (newBM != null) {
+                      newBM = newBM.copy(Bitmap.Config.ARGB_8888, true);
+                      iconBitmap = newBM;
+                      iconBitmapDescriptor = BitmapDescriptorFactory.fromBitmap(newBM);
+                    }
+                  }
+                }
+              } finally {
+                dataSource.close();
+                if (imageReference != null) {
+                  CloseableReference.closeSafely(imageReference);
                 }
               }
-              if(image != null && image instanceof CloseableSvgImage) {
-                SVG svgImage = ((CloseableSvgImage) image).getSvg();
-                Bitmap  newBM = Bitmap.createBitmap((int) Math.ceil(svgImage.getDocumentWidth()),
-                        (int) Math.ceil(svgImage.getDocumentHeight()),
-                        Bitmap.Config.ARGB_8888);
-                Canvas  bmcanvas = new Canvas(newBM);
-                svgImage.renderToCanvas(bmcanvas);
-                if (newBM != null) {
-                  newBM = newBM.copy(Bitmap.Config.ARGB_8888, true);
-                  iconBitmap = newBM;
-                  iconBitmapDescriptor = BitmapDescriptorFactory.fromBitmap(newBM);
-                }
+              if (AirMapMarker.this.markerManager != null && AirMapMarker.this.imageUri != null) {
+                AirMapMarker.this.markerManager.getSharedIcon(AirMapMarker.this.imageUri)
+                        .updateIcon(iconBitmapDescriptor, iconBitmap);
               }
+              update(true);
             }
-          } finally {
-            dataSource.close();
-            if (imageReference != null) {
-              CloseableReference.closeSafely(imageReference);
-            }
-          }
-          if (AirMapMarker.this.markerManager != null && AirMapMarker.this.imageUri != null) {
-            AirMapMarker.this.markerManager.getSharedIcon(AirMapMarker.this.imageUri)
-                .updateIcon(iconBitmapDescriptor, iconBitmap);
-          }
-          update(true);
-        }
-      };
+          };
 
   public AirMapMarker(Context context, AirMapMarkerManager markerManager) {
     super(context);
@@ -177,9 +177,9 @@ public class AirMapMarker extends AirMapFeature {
 
   private GenericDraweeHierarchy createDraweeHierarchy() {
     return new GenericDraweeHierarchyBuilder(getResources())
-        .setActualImageScaleType(ScalingUtils.ScaleType.FIT_CENTER)
-        .setFadeDuration(0)
-        .build();
+            .setActualImageScaleType(ScalingUtils.ScaleType.FIT_CENTER)
+            .setFadeDuration(0)
+            .build();
   }
 
   public void setCoordinate(ReadableMap coordinate) {
@@ -207,7 +207,7 @@ public class AirMapMarker extends AirMapFeature {
     update(false);
   }
 
-  public String getCFSvg(Integer level,  String topOutline, String bottomOutline, String topInner, String bottomInner, PromotedMarkerArgStructure promotedMarkerArg, String depotType) {
+  public String getCFSvg(Integer level,  String topOutline, String bottomOutline, String topInner, String bottomInner, PromotedMarkerArgStructure promotedMarkerArg, String depotType, Float traffic, Integer zoomLevel) {
     String topInnerEncoded = topInner.replace("#", "%23");
     String topOutlineEncoded = topOutline.replace("#", "%23");
     String bottomOutlineEncoded = bottomOutline.replace("#", "%23");
@@ -215,8 +215,7 @@ public class AirMapMarker extends AirMapFeature {
     String promotedEncoded = promotedMarkerArg.getColor().replace("#", "%23");
     final float scale = getResources().getDisplayMetrics().density;
     DisplayMetrics displayMetrics = new DisplayMetrics();
-    ((WindowManager) getContext().getSystemService(Context.WINDOW_SERVICE))
-            .getDefaultDisplay().getMetrics(displayMetrics);
+    ((WindowManager) getContext().getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay().getMetrics(displayMetrics);
     int height = displayMetrics.heightPixels;
     int width = displayMetrics.widthPixels;
     double scaleConstant = (Math.sqrt(Math.pow(height, 2) + Math.pow(width, 2))/Math.sqrt(Math.pow(1080, 2) + Math.pow(2076, 2)));
@@ -237,9 +236,13 @@ public class AirMapMarker extends AirMapFeature {
         svgSrc += getCFPromotionIconSVG();
       }
 
+      if (traffic != null && traffic != 0 && zoomLevel != null){
+        svgSrc += getPredictionIconSVG(traffic, zoomLevel);
+      }
+
       svgSrc += "%3C/svg%3E";
 
-      return "data:image/svg+xml," + svgSrc.replace("%2$s", topInnerEncoded).replace("%1$s", topOutlineEncoded)
+      return "data:image/svg+xml," + svgSrc.replace("%2$s", topInnerEncoded).replace("%1$s", topOutlineEncoded).replace("%4$s", topOutlineEncoded)
               .replace("%%width%%", Double.toString(svgWidth)).replace("%%height%%", Double.toString(svgHeight))
               .replace("%%promotedColor%%", promotedEncoded);
     }
@@ -255,6 +258,10 @@ public class AirMapMarker extends AirMapFeature {
       if (promotedMarkerArg.getIsPromoted())
       {
         svgSrc += getCFPromotionIconSVG();
+      }
+
+      if (traffic != null && traffic != 0 && zoomLevel != null){
+        svgSrc += getPredictionIconSVG(traffic, zoomLevel);
       }
 
       svgSrc += "%3C/svg%3E";
@@ -278,6 +285,10 @@ public class AirMapMarker extends AirMapFeature {
         svgSrc += getCFPromotionIconSVG();
       }
 
+      if (traffic != null && traffic != 0 && zoomLevel != null){
+        svgSrc += getPredictionIconSVG(traffic, zoomLevel);
+      }
+
       svgSrc += "%3C/svg%3E";
 
       return "data:image/svg+xml," + svgSrc.replace("%1$s", topInnerEncoded).replace("%2$s", bottomInnerEncoded)
@@ -299,6 +310,10 @@ public class AirMapMarker extends AirMapFeature {
         svgSrc += getCFPromotionIconSVG();
       }
 
+      if (traffic != null && traffic != 0 && zoomLevel != null){
+        svgSrc += getPredictionIconSVG(traffic, zoomLevel);
+      }
+
       svgSrc += "%3C/svg%3E";
 
       return "data:image/svg+xml," + svgSrc.replace("%1$s", topInnerEncoded).replace("%2$s", bottomInnerEncoded)
@@ -306,7 +321,7 @@ public class AirMapMarker extends AirMapFeature {
               .replace("%%width%%", Double.toString(svgWidth)).replace("%%height%%", Double.toString(svgHeight))
               .replace("%%promotedColor%%", promotedEncoded);
     }
-    
+
     // svg with level 100
     if (depotType != null && "VIRTUAL".equalsIgnoreCase(depotType)) {
       svgSrc = "<svg width='%%width%%' height='%%height%%' version=\"1.1\" viewBox=\"0 0 210 300\" xml:space=\"preserve\" xmlns=\"http://www.w3.org/2000/svg\"><defs><clipPath id=\"clipPath9773\"><path d=\"m0 68h25v-68h-25z\"/></clipPath></defs><g><path transform=\"matrix(8.3806 0 0 -8.3806 185.85 100.15)\" d=\"m0 0c-1.142 4.194-4.974 7.311-9.647 7.311-4.674 0-8.538-3.117-9.68-7.311-0.223-0.82-0.336-1.666-0.336-2.515 0-1.481 0.25-3.112 0.706-4.793 0.713-2.563 1.77-4.922 3.12-7.213 1.732-2.96 3.905-5.575 6.19-7.406 2.26 1.762 4.456 4.444 6.187 7.406 1.349 2.291 2.377 4.652 3.09 7.213 0.455 1.681 0.707 3.312 0.707 4.793-1e-3 0.849-0.113 1.695-0.337 2.515\" fill=\"%1$s\"/></g><g transform=\"matrix(1.3333 0 0 -1.3333 0 90.667)\"><g transform=\"matrix(6.2856 0 0 6.2856 .17906 -258.37)\"><g clip-path=\"url(#clipPath9773)\"/></g></g><g><path transform=\"matrix(6.2854 0 0 6.2854 .23874 -134.73)\" d=\"m16.682 25.604c-0.676-4e-3 -1.4218 0.04791-2.1191 0.14258l0.26953 1.9824c0.60533-0.08267 1.2239-0.125 1.8359-0.125 0.63067-0.016 1.2827 0.0441 1.916 0.13476l0.28125-1.9785c-0.72-0.10267-1.4543-0.15625-2.1836-0.15625zm-4.9219 0.79492c-1.368 0.45733-2.6655 1.1044-3.8535 1.9258l1.1367 1.6445c1.032-0.71333 2.1609-1.2765 3.3516-1.6738zm9.9043 0.0293-0.64648 1.8945c1.188 0.404 2.3118 0.97336 3.3398 1.6934l1.1465-1.6387c-1.1813-0.82667-2.4745-1.4839-3.8398-1.9492zm-15.963 3.7441c-1.0187 1.032-1.8812 2.1982-2.5625 3.4648l1.7617 0.94726c0.59067-1.0987 1.3412-2.1099 2.2266-3.0059zm21.994 0.06641-1.4316 1.3945c0.88 0.90267 1.623 1.9188 2.207 3.0215l1.7676-0.9375c-0.67467-1.2707-1.5296-2.4412-2.543-3.4785zm-25.672 6.0566c-0.12133 0.392-0.22583 0.79265-0.3125 1.1953-0.22133 1.0093-0.3377 2.0429-0.3457 3.0723l2 0.01172c0.00667-0.88933 0.10683-1.7822 0.29883-2.6582 0.076-0.34933 0.16748-0.69258 0.27148-1.0312zm29.313 0.0918-1.916 0.57617c0.09333 0.31467 0.178 0.63303 0.25 0.95703 0.19867 0.896 0.29883 1.8183 0.29883 2.7383h2c0-1.0653-0.11832-2.1326-0.34766-3.1699-0.08133-0.372-0.17582-0.74023-0.28516-1.1016zm-27.814 6.75-1.9863 0.24023c0.148 1.2213 0.39314 2.5051 0.73047 3.8145l0.074219 0.2793 1.9336-0.50976-0.070312-0.26758c-0.316-1.2253-0.54564-2.422-0.68164-3.5566zm26.279 0.08594c-0.136 1.1027-0.36059 2.2694-0.66992 3.4707l-0.09375 0.35352 1.9316 0.51953 0.09766-0.37695c0.32933-1.2813 0.57341-2.5327 0.71875-3.7207zm-24.758 6.2383-1.8887 0.66016c0.444 1.2747 0.96669 2.5627 1.5547 3.832l1.8145-0.8418c-0.56-1.2093-1.0578-2.4371-1.4805-3.6504zm23.217 0.08594c-0.424 1.2067-0.9249 2.4345-1.4902 3.6465l1.8125 0.84766c0.59333-1.2733 1.1197-2.5627 1.5664-3.832zm-20.557 5.918-1.7598 0.95117 0.13672 0.25195c0.62 1.128 1.2915 2.2344 1.9941 3.2891l1.6641-1.1094c-0.672-1.0067-1.3116-2.0625-1.9062-3.1465zm17.879 0.08593-0.08203 0.15234c-0.608 1.1067-1.2677 2.1914-1.957 3.2207l1.6641 1.1133c0.72-1.0787 1.4077-2.212 2.041-3.3613l0.0957-0.17969zm-14.316 5.4375-1.5898 1.2129c0.86533 1.1333 1.7707 2.1955 2.6934 3.1582l1.4453-1.3828c-0.87067-0.90933-1.7288-1.9149-2.5488-2.9883zm10.748 0.07422c-0.81867 1.0667-1.678 2.0678-2.5566 2.9785l1.4414 1.3887c0.93067-0.96533 1.8391-2.0257 2.7031-3.1523zm-6.2559 4.7656-1.3066 1.5137c0.53467 0.46267 1.0757 0.89421 1.625 1.2969l0.58984 0.43359 0.5918-0.43359c0.548-0.40133 1.0903-0.83421 1.625-1.2969l-1.3066-1.5137c-0.30133 0.26-0.60482 0.51-0.91016 0.75-0.30533-0.24-0.6082-0.49-0.9082-0.75z\" fill=\"%2$s\"/></g>";
@@ -319,15 +334,34 @@ public class AirMapMarker extends AirMapFeature {
       svgSrc += getCFPromotionIconSVG();
     }
 
+    if (traffic != null && traffic != 0 && zoomLevel != null) {
+      svgSrc += getPredictionIconSVG(traffic, zoomLevel);
+    }
+
     svgSrc += "%3C/svg%3E";
 
-    return "data:image/svg+xml," + svgSrc.replace("%1$s", bottomInnerEncoded).replace("%2$s", bottomOutlineEncoded)
+    return "data:image/svg+xml," + svgSrc.replace("%1$s", bottomInnerEncoded).replace("%2$s", bottomOutlineEncoded).replace("%4$s", topOutlineEncoded)
             .replace("%%width%%", Double.toString(svgWidth)).replace("%%height%%", Double.toString(svgHeight))
             .replace("%%promotedColor%%", promotedEncoded);
   }
 
   private String getCFPromotionIconSVG() {
     return  "%3Cpath fill='%%promotedColor%%' d='M153.79,0c26.118,0,47.299,21.178,47.299,47.303c0,26.127-21.181,47.302-47.299,47.302 c-26.126,0-47.308-21.175-47.308-47.302C106.482,21.178,127.664,0,153.79,0z'/%3E%3Cpath fill='%23FFFFFF' d='M146.809,69.018c0-4.655,3.102-7.756,7.752-7.756c4.652,0,7.753,3.101,7.753,7.756 c0,4.651-3.101,7.752-7.753,7.752C149.91,76.77,146.809,73.669,146.809,69.018z M149.139,54.284l-2.33-36.447h13.184l-1.551,36.447 H149.139z'/%3E";
+  }
+
+  private String getPredictionIconSVG(float traffic, int zoomLevel) {
+    if(zoomLevel >= 16){
+      if(traffic > 1){
+        return "<g   id='g1330'><g     style='fill:none'     id='g1205'     transform='matrix(8.16004,0,0,8.16004,29.438308,-139.76169)'><path       id='rect1187'       transform='rotate(-45,0,15.2549)'       style='fill:%4$s'       d='M 1.2339799,15.2549 H 11.722821 c 0.683624,0 1.233979,0.550355 1.233979,1.23398 v 10e-6 c 0,0.683625 -0.550355,1.23398 -1.233979,1.23398 H 1.2339799 C 0.55035505,17.72287 0,17.172515 0,16.48889 v -10e-6 C 0,15.805255 0.55035505,15.2549 1.2339799,15.2549 Z' /><path       id='rect1189'       transform='rotate(45,9.35809,6)'       style='fill:%4$s'       d='m 10.59207,6 h 10.488841 c 0.683625,0 1.23398,0.5503551 1.23398,1.2339799 v 1.01e-5 c 0,0.6836248 -0.550355,1.2339799 -1.23398,1.2339799 H 10.59207 c -0.6836245,0 -1.2339796,-0.5503551 -1.2339796,-1.2339799 v -1.01e-5 C 9.3580904,6.5503551 9.9084455,6 10.59207,6 Z' /><path       id='rect1191'       transform='rotate(-45,0,9.25488)'       style='fill:%4$s'       d='M 1.2339799,9.25488 H 11.722821 c 0.683624,0 1.233979,0.550355 1.233979,1.23398 v 10e-6 c 0,0.683625 -0.550355,1.23398 -1.233979,1.23398 H 1.2339799 C 0.55035505,11.72285 0,11.172495 0,10.48887 v -10e-6 C 0,9.805235 0.55035505,9.25488 1.2339799,9.25488 Z' /><path       id='rect1193'       transform='rotate(45,9.35809,0)'       style='fill:%4$s'       d='m 10.59207,0 h 10.488841 c 0.683625,0 1.23398,0.55035505 1.23398,1.2339799 v 1.01e-5 c 0,0.6836248 -0.550355,1.2339799 -1.23398,1.2339799 H 10.59207 c -0.6836245,0 -1.2339796,-0.5503551 -1.2339796,-1.2339799 v -1.01e-5 C 9.3580904,0.55035505 9.9084455,0 10.59207,0 Z' /></g></g>";
+      }else if(traffic > 0 && traffic <= 1){
+        return "<g   style='fill:none'   id='g1371'   transform='matrix(8.16004,0,0,8.16004,29.438308,-106.16169)'><rect     y='9.25488'     width='12.9568'     height='2.4679699'     rx='1.2339799'     transform='rotate(-45,0,9.25488)'     fill='%4$s'     id='rect1359'     x='0' /><rect     x='9.3580904'     width='12.9568'     height='2.4679699'     rx='1.2339799'     transform='rotate(45,9.35809,0)'     fill='%4$s'     id='rect1361'     y='0' /></g>";
+      }else if(traffic < 0 && traffic >= -1){
+        return "<g style='fill:none' id='g1569'   transform='matrix(8.1600216,0,0,8.1600216,29.438085,-106.1617)'><rect     x='18.52'     y='1.74512'     width='12.9568'     height='2.4679699'     rx='1.2339799'     transform='rotate(135,18.52,1.74512)'     fill='%4$s'     id='rect1557' /><rect     x='9.16187'     y='11'     width='12.9568'     height='2.4679699'     rx='1.2339799'     transform='rotate(-135,9.16187,11)'     fill='%4$s'     id='rect1559' /></g>";
+      }else if(traffic < -1){
+        return "<g   id='g1135'   transform='matrix(0.89473684,0,0,0.89473684,11.052632,-14.273687)'><g     id='g1092'     transform='matrix(0.90476189,0,0,0.90476189,10.000002,-12.914287)'><g       id='g835'       transform='matrix(10.080027,0,0,10.080027,11.658806,-140.74092)'><path         id='rect2'         transform='rotate(135,18.52,1.74512)'         style='fill:%4$s'         d='m 19.75398,1.74512 h 10.488841 c 0.683625,0 1.23398,0.5503551 1.23398,1.23398 v 1e-5 c 0,0.6836249 -0.550355,1.2339799 -1.23398,1.2339799 H 19.75398 C 19.070356,4.2130899 18.52,3.6627349 18.52,2.97911 v -1e-5 c 0,-0.6836249 0.550356,-1.23398 1.23398,-1.23398 z' /><path         id='rect4'         transform='rotate(-135,9.16187,11)'         style='fill:%4$s'         d='m 10.39585,11 h 10.488841 c 0.683624,0 1.233979,0.550355 1.233979,1.23398 v 10e-6 c 0,0.683625 -0.550355,1.23398 -1.233979,1.23398 H 10.39585 c -0.6836249,0 -1.23398,-0.550355 -1.23398,-1.23398 v -10e-6 C 9.16187,11.550355 9.7122251,11 10.39585,11 Z' /><path         id='rect6'         transform='rotate(135,18.52,7.74512)'         style='fill:%4$s'         d='m 19.75398,7.74512 h 10.488841 c 0.683625,0 1.23398,0.5503551 1.23398,1.23398 v 10e-6 c 0,0.6836249 -0.550355,1.23398 -1.23398,1.23398 H 19.75398 C 19.070356,10.21309 18.52,9.6627349 18.52,8.97911 v -10e-6 c 0,-0.6836249 0.550356,-1.23398 1.23398,-1.23398 z' /><path         id='rect8'         transform='rotate(-135,9.16187,17)'         style='fill:%4$s'         d='m 10.39585,17 h 10.488841 c 0.683624,0 1.233979,0.550355 1.233979,1.23398 v 10e-6 c 0,0.683625 -0.550355,1.23398 -1.233979,1.23398 H 10.39585 c -0.6836249,0 -1.23398,-0.550355 -1.23398,-1.23398 v -10e-6 C 9.16187,17.550355 9.7122251,17 10.39585,17 Z' /></g></g></g>";
+      }
+    }
+    return " ";
   }
 
   public void setSnippet(String snippet) {
@@ -521,10 +555,10 @@ public class AirMapMarker extends AirMapFeature {
     };
     Property<Marker, LatLng> property = Property.of(Marker.class, LatLng.class, "position");
     ObjectAnimator animator = ObjectAnimator.ofObject(
-      marker,
-      property,
-      typeEvaluator,
-      finalPosition);
+            marker,
+            property,
+            typeEvaluator,
+            finalPosition);
     animator.setDuration(duration);
     animator.start();
   }
@@ -615,18 +649,18 @@ public class AirMapMarker extends AirMapFeature {
       iconBitmapDescriptor = null;
       update(true);
     } else if (uri.startsWith("http://") || uri.startsWith("https://") ||
-        uri.startsWith("file://") || uri.startsWith("asset://") || uri.startsWith("data:")) {
+            uri.startsWith("file://") || uri.startsWith("asset://") || uri.startsWith("data:")) {
       ImageRequest imageRequest = ImageRequestBuilder
-          .newBuilderWithSource(Uri.parse(uri))
-          .build();
+              .newBuilderWithSource(Uri.parse(uri))
+              .build();
 
       ImagePipeline imagePipeline = Fresco.getImagePipeline();
       dataSource = imagePipeline.fetchDecodedImage(imageRequest, this);
       DraweeController controller = Fresco.newDraweeControllerBuilder()
-          .setImageRequest(imageRequest)
-          .setControllerListener(mLogoControllerListener)
-          .setOldController(logoHolder.getController())
-          .build();
+              .setImageRequest(imageRequest)
+              .setControllerListener(mLogoControllerListener)
+              .setOldController(logoHolder.getController())
+              .build();
       logoHolder.setController(controller);
     } else if(uri.startsWith("useCfMarker")) {
       String jsonString = uri.split("JSON:")[1];
@@ -642,9 +676,11 @@ public class AirMapMarker extends AirMapFeature {
         String depotType = jsonObj.has("depotType") ? jsonObj.getString("depotType") : null;
         Boolean isPromoted = new Boolean(promoted.getString("isPromoted"));
         String promotedMarkerColor = promoted.getString("color");
-        PromotedMarkerArgStructure promotedMarkerArgs = new PromotedMarkerArgStructure(isPromoted, promotedMarkerColor) ;
-        
-        String svgDataUrI = getCFSvg(Math.round(Float.parseFloat(level)), topOutline, bottomOutline, topInner, bottomInner, promotedMarkerArgs, depotType);
+        PromotedMarkerArgStructure promotedMarkerArgs = new PromotedMarkerArgStructure(isPromoted, promotedMarkerColor);
+        String traffic = jsonObj.has("traffic") ? jsonObj.getString("traffic"): null;
+        String zoomLevel = jsonObj.has("zoomLevel") ? jsonObj.getString("zoomLevel"): null;
+
+        String svgDataUrI = getCFSvg(Math.round(Float.parseFloat(level)), topOutline, bottomOutline, topInner, bottomInner, promotedMarkerArgs, depotType, Float.parseFloat(traffic), Integer.valueOf(zoomLevel));
         Log.d("JSONString", svgDataUrI);
         ImageRequest imageRequest = ImageRequestBuilder
                 .newBuilderWithSource(Uri.parse(svgDataUrI))
@@ -669,15 +705,15 @@ public class AirMapMarker extends AirMapFeature {
     } else {
       iconBitmapDescriptor = getBitmapDescriptorByName(uri);
       if (iconBitmapDescriptor != null) {
-          int drawableId = getDrawableResourceByName(uri);
-          iconBitmap = BitmapFactory.decodeResource(getResources(), drawableId);
-          if (iconBitmap == null) { // VectorDrawable or similar
-              Drawable drawable = getResources().getDrawable(drawableId);
-              iconBitmap = Bitmap.createBitmap(drawable.getIntrinsicWidth(), drawable.getIntrinsicHeight(), Bitmap.Config.ARGB_8888);
-              drawable.setBounds(0, 0, drawable.getIntrinsicWidth(), drawable.getIntrinsicHeight());
-              Canvas canvas = new Canvas(iconBitmap);
-              drawable.draw(canvas);
-          }
+        int drawableId = getDrawableResourceByName(uri);
+        iconBitmap = BitmapFactory.decodeResource(getResources(), drawableId);
+        if (iconBitmap == null) { // VectorDrawable or similar
+          Drawable drawable = getResources().getDrawable(drawableId);
+          iconBitmap = Bitmap.createBitmap(drawable.getIntrinsicWidth(), drawable.getIntrinsicHeight(), Bitmap.Config.ARGB_8888);
+          drawable.setBounds(0, 0, drawable.getIntrinsicWidth(), drawable.getIntrinsicHeight());
+          Canvas canvas = new Canvas(iconBitmap);
+          drawable.draw(canvas);
+        }
       }
       if (this.markerManager != null && uri != null) {
         this.markerManager.getSharedIcon(uri).updateIcon(iconBitmapDescriptor, iconBitmap);
@@ -896,18 +932,18 @@ public class AirMapMarker extends AirMapFeature {
     LinearLayout LL = new LinearLayout(context);
     LL.setOrientation(LinearLayout.VERTICAL);
     LL.setLayoutParams(new LinearLayout.LayoutParams(
-        this.calloutView.width,
-        this.calloutView.height,
-        0f
+            this.calloutView.width,
+            this.calloutView.height,
+            0f
     ));
 
 
     LinearLayout LL2 = new LinearLayout(context);
     LL2.setOrientation(LinearLayout.HORIZONTAL);
     LL2.setLayoutParams(new LinearLayout.LayoutParams(
-        this.calloutView.width,
-        this.calloutView.height,
-        0f
+            this.calloutView.width,
+            this.calloutView.height,
+            0f
     ));
 
     LL.addView(LL2);
@@ -918,9 +954,9 @@ public class AirMapMarker extends AirMapFeature {
 
   private int getDrawableResourceByName(String name) {
     return getResources().getIdentifier(
-        name,
-        "drawable",
-        getContext().getPackageName());
+            name,
+            "drawable",
+            getContext().getPackageName());
   }
 
   private BitmapDescriptor getBitmapDescriptorByName(String name) {
