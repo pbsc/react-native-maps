@@ -677,7 +677,7 @@ public class AirMapMarker extends AirMapFeature {
         Boolean isPromoted = new Boolean(promoted.getString("isPromoted"));
         String promotedMarkerColor = promoted.getString("color");
         PromotedMarkerArgStructure promotedMarkerArgs = new PromotedMarkerArgStructure(isPromoted, promotedMarkerColor);
-        String traffic = jsonObj.has("traffic") ? jsonObj.getString("traffic"): null;
+        String traffic = jsonObj.has("traffic") ? jsonObj.getString("traffic"): "0";
         String zoomLevel = jsonObj.has("zoomLevel") ? jsonObj.getString("zoomLevel"): null;
 
         String svgDataUrI = getCFSvg(Math.round(Float.parseFloat(level)), topOutline, bottomOutline, topInner, bottomInner, promotedMarkerArgs, depotType, Float.parseFloat(traffic), Integer.valueOf(zoomLevel));
