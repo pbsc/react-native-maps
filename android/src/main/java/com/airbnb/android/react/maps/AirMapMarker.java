@@ -5,9 +5,12 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Rect;
 import android.graphics.drawable.Animatable;
 import android.graphics.drawable.Drawable;
+import android.graphics.drawable.PictureDrawable;
 import android.net.Uri;
+import android.util.Log;
 import android.view.View;
 import android.widget.LinearLayout;
 import android.animation.ObjectAnimator;
@@ -26,10 +29,15 @@ import com.facebook.drawee.generic.GenericDraweeHierarchy;
 import com.facebook.drawee.generic.GenericDraweeHierarchyBuilder;
 import com.facebook.drawee.interfaces.DraweeController;
 import com.facebook.drawee.view.DraweeHolder;
+import com.facebook.imagepipeline.common.ImageDecodeOptions;
 import com.facebook.imagepipeline.core.ImagePipeline;
+import com.facebook.imagepipeline.decoder.ImageDecoder;
+import com.facebook.imagepipeline.drawable.DrawableFactory;
 import com.facebook.imagepipeline.image.CloseableImage;
 import com.facebook.imagepipeline.image.CloseableStaticBitmap;
+import com.facebook.imagepipeline.image.EncodedImage;
 import com.facebook.imagepipeline.image.ImageInfo;
+import com.facebook.imagepipeline.image.QualityInfo;
 import com.facebook.imagepipeline.request.ImageRequest;
 import com.facebook.imagepipeline.request.ImageRequestBuilder;
 import com.facebook.react.bridge.ReadableMap;
@@ -39,6 +47,10 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.caverock.androidsvg.SVG;
+import com.caverock.androidsvg.SVGParseException;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 public class AirMapMarker extends AirMapFeature {
 
@@ -103,6 +115,19 @@ public class AirMapMarker extends AirMapFeature {
                   bitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true);
                   iconBitmap = bitmap;
                   iconBitmapDescriptor = BitmapDescriptorFactory.fromBitmap(bitmap);
+                }
+              }
+              if(image != null && image instanceof CloseableSvgImage) {
+                SVG svgImage = ((CloseableSvgImage) image).getSvg();
+                Bitmap  newBM = Bitmap.createBitmap((int) Math.ceil(svgImage.getDocumentWidth()),
+                        (int) Math.ceil(svgImage.getDocumentHeight()),
+                        Bitmap.Config.ARGB_8888);
+                Canvas  bmcanvas = new Canvas(newBM);
+                svgImage.renderToCanvas(bmcanvas);
+                if (newBM != null) {
+                  newBM = newBM.copy(Bitmap.Config.ARGB_8888, true);
+                  iconBitmap = newBM;
+                  iconBitmapDescriptor = BitmapDescriptorFactory.fromBitmap(newBM);
                 }
               }
             }
@@ -178,6 +203,40 @@ public class AirMapMarker extends AirMapFeature {
       marker.setTitle(title);
     }
     update(false);
+  }
+
+  public String getCFSvg(Integer level,  String topOutline, String bottomOutline, String topInner, String bottomInner) {
+    String topInnerEncoded = topInner.replace("#", "%23");
+    String topOutlineEncoded = topOutline.replace("#", "%23");
+    String bottomOutlineEncoded = bottomOutline.replace("#", "%23");
+    String bottomInnerEncoded = bottomInner.replace("#", "%23");
+    if (level == 0) {
+      // svg with level 0
+      String svgSrc = "%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='136' viewBox='0 0 210 300'%3E%3Cg id='_100'%3E%3Cpath fill='%2$s' d='M194.67,80.76C184.16,42.18,148,13.51,105,13.51S25.84,42.18,15.33,80.76a88.07,88.07,0,0,0-3.09,23.14c0,13.62,2.3,28.63,6.49,44.1a281.12,281.12,0,0,0,28.59,67.24c15.93,27.23,36,51.54,57.68,67.25,21.65-15.71,41.76-40,57.68-67.25A281.12,281.12,0,0,0,191.27,148c4.18-15.47,6.49-30.48,6.49-44.1A88.07,88.07,0,0,0,194.67,80.76Z'/%3E%3Cpath fill='%1$s' d='M207.64,80.76C197.46,34.77,155.43,0,105,0S12.54,34.77,2.36,80.76A99.59,99.59,0,0,0,0,102.31C0,116.64,2.26,132.12,6.38,148c5.79,22.32,15.26,45.43,27.33,67.24,18.83,34,44,64.94,71.29,84.76,27.32-19.82,52.46-50.71,71.29-84.76,12.07-21.81,21.54-44.92,27.33-67.24,4.12-15.88,6.38-31.36,6.38-45.69A99.59,99.59,0,0,0,207.64,80.76Zm-45,134.48c-15.92,27.23-36,51.54-57.68,67.25-21.65-15.71-41.75-40-57.68-67.25A281.12,281.12,0,0,1,18.73,148c-4.19-15.47-6.49-30.48-6.49-44.1a88.07,88.07,0,0,1,3.09-23.14C25.84,42.18,62,13.51,105,13.51s79.16,28.67,89.67,67.25a88.07,88.07,0,0,1,3.09,23.14c0,13.62-2.31,28.63-6.49,44.1A281.12,281.12,0,0,1,162.68,215.24Z'/%3E%3C/g%3E%3C/svg%3E";
+      return "data:image/svg+xml," + svgSrc.replace("%2$s", topInnerEncoded).replace("%1$s", topOutlineEncoded);
+    }
+
+    if (level > 0 && level < 37) {
+      // svg with level 25
+      String svgSrc = "%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='136' viewBox='0 0 210 300'%3E%3Cg id='_100' data-name='100'%3E%3Cpath fill='%1$s' class='cls-1' d='M194.67,80.76C184.16,42.18,148,13.51,105,13.51S25.84,42.18,15.33,80.76a88.07,88.07,0,0,0-3.09,23.14c0,13.62,2.3,28.63,6.49,44.1a281.12,281.12,0,0,0,28.59,67.24H162.68A281.12,281.12,0,0,0,191.27,148c4.18-15.47,6.49-30.48,6.49-44.1A88.07,88.07,0,0,0,194.67,80.76Z'/%3E%3Cpath fill='%2$s' class='cls-2' d='M105,282.49c21.65-15.71,41.76-40,57.68-67.25H47.32C63.25,242.47,83.35,266.78,105,282.49Z'/%3E%3Cpath fill='%3$s' class='cls-3' d='M105,282.49c-21.65-15.71-41.75-40-57.68-67.25H33.71c18.83,34,44,64.94,71.29,84.76,27.32-19.82,52.46-50.71,71.29-84.76H162.68C146.76,242.47,126.65,266.78,105,282.49Z'/%3E%3Cpath fill='%4$s' d='M207.64,80.76C197.46,34.77,155.43,0,105,0S12.54,34.77,2.36,80.76A99.59,99.59,0,0,0,0,102.31C0,116.64,2.26,132.12,6.38,148c5.79,22.32,15.26,45.43,27.33,67.24H47.32A281.12,281.12,0,0,1,18.73,148c-4.19-15.47-6.49-30.48-6.49-44.1a88.07,88.07,0,0,1,3.09-23.14C25.84,42.18,62,13.51,105,13.51s79.16,28.67,89.67,67.25a88.07,88.07,0,0,1,3.09,23.14c0,13.62-2.31,28.63-6.49,44.1a281.12,281.12,0,0,1-28.59,67.24h13.61c12.07-21.81,21.54-44.92,27.33-67.24,4.12-15.88,6.38-31.36,6.38-45.69A99.59,99.59,0,0,0,207.64,80.76Z'/%3E%3C/g%3E%3C/svg%3E";
+      return "data:image/svg+xml," + svgSrc.replace("%1$s", topInnerEncoded).replace("%2$s", bottomInner).replace("%3$s", bottomOutlineEncoded).replace("%4$s", topOutlineEncoded);
+    }
+
+    if (level > 37 && level < 62) {
+      // svg with level 50
+      String svgSrc = "%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='136' viewBox='0 0 210 300'%3E%3Cg id='_100' data-name='100'%3E%3Cpath class='cls-1' fill='%1$s' d='M194.67,81c-10.43-38.6-46.48-67.34-89.52-67.44S25.93,42,15.33,80.56a88.09,88.09,0,0,0-3.14,23.14c0,13.62,2.24,28.63,6.39,44.11l172.55.38c4.21-15.46,6.55-30.47,6.58-44.09A87.76,87.76,0,0,0,194.67,81Z'/%3E%3Cpath class='cls-2' fill='%2$s' d='M18.73,148a281.12,281.12,0,0,0,28.59,67.24c15.93,27.23,36,51.54,57.68,67.25,21.65-15.71,41.76-40,57.68-67.25A281.12,281.12,0,0,0,191.27,148Z'/%3E%3Cpath class='cls-3' fill='%3$s' d='M207.64,80.76C197.46,34.77,155.43,0,105,0S12.54,34.77,2.36,80.76A99.59,99.59,0,0,0,0,102.31C0,116.64,2.26,132.12,6.38,148H18.73c-4.19-15.47-6.49-30.48-6.49-44.1a88.07,88.07,0,0,1,3.09-23.14C25.84,42.18,62,13.51,105,13.51s79.16,28.67,89.67,67.25a88.07,88.07,0,0,1,3.09,23.14c0,13.62-2.31,28.63-6.49,44.1h12.35c4.12-15.88,6.38-31.36,6.38-45.69A99.59,99.59,0,0,0,207.64,80.76Z'/%3E%3Cpath fill='%4$s' class='cls-4' d='M191.27,148a281.12,281.12,0,0,1-28.59,67.24c-15.92,27.23-36,51.54-57.68,67.25-21.65-15.71-41.75-40-57.68-67.25A281.12,281.12,0,0,1,18.73,148H6.38c5.79,22.32,15.26,45.43,27.33,67.24,18.83,34,44,64.94,71.29,84.76,27.32-19.82,52.46-50.71,71.29-84.76,12.07-21.81,21.54-44.92,27.33-67.24Z'/%3E%3C/g%3E%3C/svg%3E";
+      return "data:image/svg+xml," + svgSrc.replace("%1$s", topInnerEncoded).replace("%2$s", bottomInnerEncoded).replace("%3$s", topOutlineEncoded).replace("%4$s", bottomOutlineEncoded);
+    }
+
+    if (level > 62 && level < 88) {
+      // svg with level 75
+      String svgSrc = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='136' viewBox='0 0 210 300'%3E%3Cg id='_100' data-name='100'%3E%3Cpath class='cls-1' fill='%1$s' d='M105,13.51c-43,0-79.16,28.67-89.67,67.25H194.67C184.16,42.18,148,13.51,105,13.51Z'/%3E%3Cpath fill='%2$s' class='cls-2' d='M194.67,80.76H15.33a88.07,88.07,0,0,0-3.09,23.14c0,13.62,2.3,28.63,6.49,44.1a281.12,281.12,0,0,0,28.59,67.24c15.93,27.23,36,51.54,57.68,67.25,21.65-15.71,41.76-40,57.68-67.25A281.12,281.12,0,0,0,191.27,148c4.18-15.47,6.49-30.48,6.49-44.1A88.07,88.07,0,0,0,194.67,80.76Z'/%3E%3Cpath fill='%3$s' class='cls-3' d='M105,13.51c43,0,79.16,28.67,89.67,67.25h13C197.46,34.77,155.43,0,105,0S12.54,34.77,2.36,80.76h13C25.84,42.18,62,13.51,105,13.51Z'/%3E%3Cpath fill='%4$s' class='cls-4' d='M207.64,80.76h-13a88.07,88.07,0,0,1,3.09,23.14c0,13.62-2.31,28.63-6.49,44.1a281.12,281.12,0,0,1-28.59,67.24c-15.92,27.23-36,51.54-57.68,67.25-21.65-15.71-41.75-40-57.68-67.25A281.12,281.12,0,0,1,18.73,148c-4.19-15.47-6.49-30.48-6.49-44.1a88.07,88.07,0,0,1,3.09-23.14h-13A99.59,99.59,0,0,0,0,102.31C0,116.64,2.26,132.12,6.38,148c5.79,22.32,15.26,45.43,27.33,67.24,18.83,34,44,64.94,71.29,84.76,27.32-19.82,52.46-50.71,71.29-84.76,12.07-21.81,21.54-44.92,27.33-67.24,4.12-15.88,6.38-31.36,6.38-45.69A99.59,99.59,0,0,0,207.64,80.76Z'/%3E%3C/g%3E%3C/svg%3E";
+      return svgSrc.replace("%1$s", topInnerEncoded).replace("%2$s", bottomInnerEncoded).replace("%3$s", topOutlineEncoded).replace("%4$s", bottomOutlineEncoded);
+    }
+    // svg with level 100
+    String svgSrc = "%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='136' viewBox='0 0 210 300'%3E%3Cg id='_100' data-name='100'%3E%3Cpath class='cls-1' fill='%1$s' d='M194.67,80.76C184.16,42.18,148,13.51,105,13.51S25.84,42.18,15.33,80.76a88.07,88.07,0,0,0-3.09,23.14c0,13.62,2.3,28.63,6.49,44.1a281.12,281.12,0,0,0,28.59,67.24c15.93,27.23,36,51.54,57.68,67.25,21.65-15.71,41.76-40,57.68-67.25A281.12,281.12,0,0,0,191.27,148c4.18-15.47,6.49-30.48,6.49-44.1A88.07,88.07,0,0,0,194.67,80.76Z'/%3E%3Cpath fill='%2$s' class='cls-2' d='M207.64,80.76C197.46,34.77,155.43,0,105,0S12.54,34.77,2.36,80.76A99.59,99.59,0,0,0,0,102.31C0,116.64,2.26,132.12,6.38,148c5.79,22.32,15.26,45.43,27.33,67.24,18.83,34,44,64.94,71.29,84.76,27.32-19.82,52.46-50.71,71.29-84.76,12.07-21.81,21.54-44.92,27.33-67.24,4.12-15.88,6.38-31.36,6.38-45.69A99.59,99.59,0,0,0,207.64,80.76ZM191.27,148a281.12,281.12,0,0,1-28.59,67.24c-15.92,27.23-36,51.54-57.68,67.25-21.65-15.71-41.75-40-57.68-67.25A281.12,281.12,0,0,1,18.73,148c-4.19-15.47-6.49-30.48-6.49-44.1a88.07,88.07,0,0,1,3.09-23.14C25.84,42.18,62,13.51,105,13.51s79.16,28.67,89.67,67.25a88.07,88.07,0,0,1,3.09,23.14C197.76,117.52,195.45,132.53,191.27,148Z'/%3E%3C/g%3E%3C/svg%3E";
+    return "data:image/svg+xml," + svgSrc.replace("%1$s", topInnerEncoded).replace("%2$s", bottomInnerEncoded).replace("%3$s", topOutlineEncoded).replace("%4$s", bottomOutlineEncoded);
+
   }
 
   public void setSnippet(String snippet) {
@@ -298,6 +357,64 @@ public class AirMapMarker extends AirMapFeature {
     }
   }
 
+  public static class CloseableSvgImage extends CloseableImage {
+
+    private final SVG mSvg;
+
+    private boolean mClosed = false;
+
+    public CloseableSvgImage(SVG svg) {
+      mSvg = svg;
+    }
+
+    public SVG getSvg() {
+      return mSvg;
+    }
+
+    @Override
+    public int getSizeInBytes() {
+      return 0;
+    }
+
+    @Override
+    public void close() {
+      mClosed = true;
+    }
+
+    @Override
+    public boolean isClosed() {
+      return mClosed;
+    }
+
+    @Override
+    public int getWidth() {
+      return 0;
+    }
+
+    @Override
+    public int getHeight() {
+      return 0;
+    }
+  }
+
+  public static class SvgDecoder implements ImageDecoder {
+
+    @Override
+    public CloseableImage decode(
+            EncodedImage encodedImage,
+            int length,
+            QualityInfo qualityInfo,
+            ImageDecodeOptions options) {
+      try {
+        SVG svg = SVG.getFromInputStream(encodedImage.getInputStream());
+        return new CloseableSvgImage(svg);
+      } catch (SVGParseException e) {
+        e.printStackTrace();
+      }
+      return null;
+    }
+  }
+
   public LatLng interpolate(float fraction, LatLng a, LatLng b) {
     double lat = (b.latitude - a.latitude) * fraction + a.latitude;
     double lng = (b.longitude - a.longitude) * fraction + a.longitude;
@@ -319,6 +436,36 @@ public class AirMapMarker extends AirMapFeature {
       finalPosition);
     animator.setDuration(duration);
     animator.start();
+  }
+
+  public static class SvgDrawableFactory implements DrawableFactory {
+
+    @Override
+    public boolean supportsImageType(CloseableImage image) {
+      return image instanceof CloseableSvgImage;
+    }
+
+    @Nullable
+    @Override
+    public Drawable createDrawable(CloseableImage image) {
+      return new SvgPictureDrawable(((CloseableSvgImage) image).getSvg());
+    }
+  }
+
+  public static class SvgPictureDrawable extends PictureDrawable {
+
+    private final SVG mSvg;
+
+    public SvgPictureDrawable(SVG svg) {
+      super(null);
+      mSvg = svg;
+    }
+
+    @Override
+    protected void onBoundsChange(Rect bounds) {
+      super.onBoundsChange(bounds);
+      setPicture(mSvg.renderToPicture(bounds.width(), bounds.height()));
+    }
   }
 
   public void setImage(String uri) {
@@ -349,6 +496,8 @@ public class AirMapMarker extends AirMapFeature {
     this.imageUri = uri;
     if (!shouldLoadImage) {return;}
 
+    Log.d("URI log", uri);
+
     if (uri == null) {
       iconBitmapDescriptor = null;
       update(true);
@@ -366,6 +515,38 @@ public class AirMapMarker extends AirMapFeature {
           .setOldController(logoHolder.getController())
           .build();
       logoHolder.setController(controller);
+    } else if(uri.startsWith("useCfMarker")) {
+      String jsonString = uri.split("JSON:")[1];
+
+      try {
+        JSONObject jsonObj = new JSONObject(jsonString);
+        String  topOutline = jsonObj.getString("topOutline");
+        String bottomOutline = jsonObj.getString("bottomOutline");
+        String  topInner = jsonObj.getString("topInner");
+        String bottomInner = jsonObj.getString("bottomInner");
+        String level = jsonObj.getString("level");
+        String svgDataUrI = getCFSvg(Math.round(Float.parseFloat(level)), topOutline, bottomOutline, topInner, bottomInner);
+        Log.d("JSONString", svgDataUrI);
+        ImageRequest imageRequest = ImageRequestBuilder
+                .newBuilderWithSource(Uri.parse(svgDataUrI))
+                .setImageDecodeOptions(
+                        ImageDecodeOptions.newBuilder()
+                                .setCustomImageDecoder(new SvgDecoder())
+                                .build())
+                .build();
+
+        ImagePipeline imagePipeline = Fresco.getImagePipeline();
+        dataSource = imagePipeline.fetchDecodedImage(imageRequest, this);
+        DraweeController controller = Fresco.newDraweeControllerBuilder()
+                .setImageRequest(imageRequest)
+                .setCustomDrawableFactory(new SvgDrawableFactory())
+                .setControllerListener(mLogoControllerListener)
+                .setOldController(logoHolder.getController())
+                .build();
+        logoHolder.setController(controller);
+      } catch (JSONException e) {
+        Log.d("CF Svg", "unable to parse JSON");
+      }
     } else {
       iconBitmapDescriptor = getBitmapDescriptorByName(uri);
       if (iconBitmapDescriptor != null) {
