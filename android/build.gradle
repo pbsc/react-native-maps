@@ -50,4 +50,5 @@ dependencies {
   implementation "com.google.android.gms:play-services-location:19.0.1"
   implementation 'com.google.maps.android:android-maps-utils:0.5'
   implementation "androidx.work:work-runtime:$work_version"
+  implementation 'com.caverock:androidsvg-aar:1.4'
 }
