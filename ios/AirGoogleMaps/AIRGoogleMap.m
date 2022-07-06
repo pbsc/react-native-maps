@@ -65,6 +65,7 @@ id regionAsJSON(MKCoordinateRegion region) {
   BOOL _initialCameraSetOnLoad;
   BOOL _didCallOnMapReady;
   BOOL _didMoveToWindow;
+  BOOL _didPrepareMap;
   BOOL _zoomTapEnabled;
 }
 
@@ -85,6 +86,7 @@ id regionAsJSON(MKCoordinateRegion region) {
     _region = MKCoordinateRegionMake(CLLocationCoordinate2DMake(0.0, 0.0), MKCoordinateSpanMake(0.0, 0.0));
     _initialCameraSetOnLoad = false;
     _didCallOnMapReady = false;
+    _didPrepareMap = false;
     _didMoveToWindow = false;
     _zoomTapEnabled = YES;
 
@@ -288,14 +290,23 @@ id regionAsJSON(MKCoordinateRegion region) {
     self.camera = camera;
 }
 
+- (void)setOnMapReady:(RCTBubblingEventBlock)onMapReady {
+    _onMapReady = onMapReady;
+    if(!_didCallOnMapReady && _didPrepareMap) {
+      self.onMapReady(@{});
+      _didCallOnMapReady = true;
+    }
+}
 
 - (void)didPrepareMap {
   UIView* mapView = [self valueForKey:@"mapView"]; //GMSVectorMapView
   [self overrideGestureRecognizersForView:mapView];
 
-  if (_didCallOnMapReady) return;
-  _didCallOnMapReady = true;
-  if (self.onMapReady) self.onMapReady(@{});
+  if (!_didCallOnMapReady && self.onMapReady) {
+    self.onMapReady(@{});
+    _didCallOnMapReady = true;
+  }
+  _didPrepareMap = true;
 }
 
 - (void)mapViewDidFinishTileRendering {
