@@ -2,6 +2,10 @@
 
 React Native Map components for iOS + Android
 
+
+## Contributing
+This project is being maintained by a small group of people, and any help with issues and pull requests are always appreciated. If you are able and willing to contribute, please read the [guidelines](./CONTRIBUTING.md).
+
 ## Installation
 
 See [Installation Instructions](docs/installation.md).
@@ -15,12 +19,6 @@ support this module on anything but the latest version of React Native. With tha
 our best to stay compatible with older versions as much that is practical, and the peer dependency
 of this requirement is set to `"react-native": "*"` explicitly for this reason. If you are using
 an older version of React Native with this module though, some features may be buggy.
-
-### Note about React requires
-
-Since react-native 0.25.0, `React` should be required from `node_modules`.
-React Native versions from 0.18 should be working out of the box, for lower
-versions you should add `react` as a dependency in your `package.json`.
 
 ## Component API
 
@@ -108,8 +106,9 @@ import { Marker } from 'react-native-maps';
   region={this.state.region}
   onRegionChange={this.onRegionChange}
 >
-  {this.state.markers.map(marker => (
+  {this.state.markers.map((marker, index) => (
     <Marker
+      key={index}
       coordinate={marker.latlng}
       title={marker.title}
       description={marker.description}
@@ -118,21 +117,26 @@ import { Marker } from 'react-native-maps';
 </MapView>
 ```
 
-### Rendering a Marker with a custom view
-
-```jsx
-<Marker coordinate={marker.latlng}>
-  <MyCustomMarkerView {...marker} />
-</Marker>
-```
-
 ### Rendering a Marker with a custom image
-
+1. You need to generate an `png` image with various resolution (lets call them `custom_pin`) - for more information go to [Android](https://developer.android.com/studio/write/image-asset-studio#access), [iOS](https://developer.apple.com/library/archive/documentation/ToolsLanguages/Conceptual/Xcode_Overview/AddingImages.html)
+2. put all images in Android drawables and iOS assets dir 
+3. Now you can use the following code:
 ```jsx
 <Marker
-  coordinate={marker.latlng}
-  image={require('../assets/pin.png')}
+  coordinate={{ latitude : latitude , longitude : longitude }}
+  image={{uri: 'custom_pin'}}
 />
+```
+
+Note: You can also pass the image binary data like `image={require('custom_pin.png')}`, but this will not scale good with the different screen sizes.
+
+### Rendering a Marker with a custom view
+Note: This has performance implications, if you wish for a simpler solution go with a custom image (save your self the head ache)
+
+```jsx
+<Marker coordinate={{ latitude : latitude , longitude : longitude }}>
+  <MyCustomMarkerView {...marker} />
+</Marker>
 ```
 
 ### Rendering a custom Marker with a custom Callout
@@ -232,7 +236,7 @@ See [OSM Wiki](https://wiki.openstreetmap.org/wiki/Category:Tile_downloading) fo
 
 ### Overlaying other components on the map
 
-Place components you that wish to overlay `MapView` underneath the `MapView` closing tag. Absolutely position these elements.
+Place components that you wish to overlay `MapView` underneath the `MapView` closing tag. Absolutely position these elements.
 
 ```jsx
 render() {
@@ -241,7 +245,7 @@ render() {
       region={this.state.region}
     />
     <OverlayComponent
-      style={{position: “absolute”, bottom: 50}}
+      style={{position: "absolute", bottom: 50}}
     />
   );
 }
@@ -280,25 +284,9 @@ import MapView, { PROVIDER_GOOGLE } from 'react-native-maps'
 
 Then add the AirGoogleMaps directory:
 
-https://github.com/react-native-community/react-native-maps/blob/1e71a21f39e7b88554852951f773c731c94680c9/docs/installation.md#ios
+https://github.com/react-native-maps/react-native-maps/blob/1e71a21f39e7b88554852951f773c731c94680c9/docs/installation.md#ios
 
 An unofficial step-by-step guide is also available at https://gist.github.com/heron2014/e60fa003e9b117ce80d56bb1d5bfe9e0
-
-## Examples
-
-To run examples:
-
-```bash
-npm i
-npm start
-
-#Android
-npm run run:android
-
-#iOS
-npm run build:ios
-npm run run:ios
-```
 
 ### MapView Events
 
@@ -469,7 +457,7 @@ render() {
 Markers can also accept an `AnimatedRegion` value as a coordinate.
 
 ```jsx
-import Mapview, { AnimatedRegion, Marker } from 'react-native-maps';
+import Mapview, { AnimatedRegion, MarkerAnimated } from 'react-native-maps';
 
 getInitialState() {
   return {
@@ -486,7 +474,7 @@ componentWillReceiveProps(nextProps) {
   if (this.props.coordinate !== nextProps.coordinate) {
     if (Platform.OS === 'android') {
       if (this.marker) {
-        this.marker._component.animateMarkerToCoordinate(
+        this.marker.animateMarkerToCoordinate(
           nextProps.coordinate,
           duration
         );
@@ -494,6 +482,7 @@ componentWillReceiveProps(nextProps) {
     } else {
       this.state.coordinate.timing({
         ...nextProps.coordinate,
+        useNativeDriver: true, // defaults to false if not passed explicitly
         duration
       }).start();
     }
@@ -503,44 +492,7 @@ componentWillReceiveProps(nextProps) {
 render() {
   return (
     <MapView initialRegion={...}>
-      <MapView.Marker.Animated
-        ref={marker => { this.marker = marker }}
-        coordinate={this.state.coordinate}
-      />
-    </MapView>
-  );
-}
-```
-
-If you need a smoother animation to move the marker on Android, you can modify the previous example:
-
-```jsx
-// ...
-
-componentWillReceiveProps(nextProps) {
-  const duration = 500
-
-  if (this.props.coordinate !== nextProps.coordinate) {
-    if (Platform.OS === 'android') {
-      if (this.marker) {
-        this.marker._component.animateMarkerToCoordinate(
-          nextProps.coordinate,
-          duration
-        );
-      }
-    } else {
-      this.state.coordinate.timing({
-        ...nextProps.coordinate,
-        duration
-      }).start();
-    }
-  }
-}
-
-render() {
-  return (
-    <MapView initialRegion={...}>
-      <Marker.Animated
+      <MarkerAnimated
         ref={marker => { this.marker = marker }}
         coordinate={this.state.coordinate}
       />
@@ -612,8 +564,8 @@ Pass an array of coordinates to focus a map region on said coordinates.
 
 * Make sure that you have [properly installed](docs/installation.md) react-native-maps.
 * Check in the logs if there is more informations about the issue.
-* Try setting the style of the MapView to an absolute position with top, left, right and bottom values set.
-* Make sure you have enabled Google Maps API in ![Google developer console](https://console.developers.google.com/apis/library)
+* Try setting the style of the MapView to an absolute position with top, left, right and bottom  values set.
+*   Make sure you have enabled Google Maps API in [Google developer console](https://console.developers.google.com/apis/library)
 
 ```javascript
 const styles = StyleSheet.create({
@@ -652,6 +604,35 @@ Good:
 </View>
 ```
 
+#### Children Components Not Re-Rendering
+Components that aren't declared by this library (Ex: Markers, Polyline) must not be children of the MapView component due to MapView's unique rendering methodology. Have your custom components / views outside the MapView component and position absolute to ensure they only re-render as needed.
+Example:
+Bad:
+
+```jsx
+  <View style={StyleSheet.absoluteFillObject}>
+    <MapView style={StyleSheet.absoluteFillObject}>
+      <View style={{ position: 'absolute', top: 100, left: 50 }}/>
+    </MapView>
+  </View>
+```
+
+Good:
+
+```jsx
+  <View style={StyleSheet.absoluteFillObject}>
+    <MapView style={StyleSheet.absoluteFillObject} />
+    <View style={{ position: 'absolute', top: 100, left: 50 }}/>
+  </View>
+```
+
+Source: https://github.com/react-native-maps/react-native-maps/issues/1901
+
+#### Crashing with EXC_BAD_ACCESS on iOS when switching apps
+
+`<MapView>` using Apple Maps in `mapType: "standard"` will sometimes crash when you background the app or switch into another app. This is only an issue in XCode using Metal API Validation, and won't happen in production. To eliminate this problem even while debugging in XCode, go to `Edit Scheme... -> Run (Debug) -> Diagnostics` and uncheck `Metal -> API Validation`. (h/t [@Simon-TechForm](https://github.com/Simon-TechForm)).
+
+Source: https://github.com/react-native-maps/react-native-maps/issues/3957#issuecomment-924161121
 
 License
 --------
