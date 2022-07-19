@@ -1,12 +1,25 @@
-declare module "react-native-maps" {
-  import * as React from "react";
+declare module 'react-native-maps' {
+  import * as React from 'react';
   import {
-    Animated,
+    Animated as RNAnimated,
     ImageRequireSource,
     ImageURISource,
     NativeSyntheticEvent,
-    ViewProperties
-  } from "react-native";
+    ViewProperties,
+  } from 'react-native';
+
+  export interface Address {
+    name: string;
+    thoroughfare: string;
+    subThoroughfare: string;
+    locality: string;
+    subLocality: string;
+    administrativeArea: string;
+    subAdministrativeArea: string;
+    postalCode: string;
+    countryCode: string;
+    country: string;
+  }
 
   export interface Region {
     latitude: number;
@@ -33,32 +46,45 @@ declare module "react-native-maps" {
     y: number;
   }
 
+  export type EventActionType =
+    | 'marker-press'
+    | 'polygon-press'
+    | 'polyline-press'
+    | 'callout-press'
+    | 'press'
+    | 'long-press'
+    | 'overlay-press'
+    | undefined;
+
   // helper interface
   export interface MapEvent<T = {}>
     extends NativeSyntheticEvent<
       T & {
         coordinate: LatLng;
         position: Point;
+        action: EventActionType;
+        id?: string;
       }
     > {}
 
-  export type LineCapType = "butt" | "round" | "square";
-  export type LineJoinType = "miter" | "round" | "bevel";
+  export type LineCapType = 'butt' | 'round' | 'square';
+  export type LineJoinType = 'miter' | 'round' | 'bevel';
 
   // =======================================================================
   //  AnimatedRegion
   // =======================================================================
 
   interface AnimatedRegionTimingConfig
-    extends Animated.AnimationConfig,
+    extends RNAnimated.AnimationConfig,
       Partial<Region> {
     easing?: (value: number) => number;
     duration?: number;
     delay?: number;
+    useNativeDriver: boolean;
   }
 
   interface AnimatedRegionSpringConfig
-    extends Animated.AnimationConfig,
+    extends RNAnimated.AnimationConfig,
       Partial<Region> {
     overshootClamping?: boolean;
     restDisplacementThreshold?: number;
@@ -71,13 +97,14 @@ declare module "react-native-maps" {
     stiffness?: number;
     mass?: number;
     damping?: number;
+    useNativeDriver: boolean;
   }
 
-  export class AnimatedRegion extends Animated.AnimatedWithChildren {
-    latitude: Animated.Value;
-    longitude: Animated.Value;
-    latitudeDelta: Animated.Value;
-    longitudeDelta: Animated.Value;
+  export class AnimatedRegion extends RNAnimated.AnimatedWithChildren {
+    latitude: RNAnimated.Value;
+    longitude: RNAnimated.Value;
+    latitudeDelta: RNAnimated.Value;
+    longitudeDelta: RNAnimated.Value;
 
     constructor(region?: Region);
 
@@ -87,8 +114,8 @@ declare module "react-native-maps" {
     stopAnimation(callback?: (region: Region) => void): void;
     addListener(callback: (region: Region) => void): string;
     removeListener(id: string): void;
-    spring(config: AnimatedRegionSpringConfig): Animated.CompositeAnimation;
-    timing(config: AnimatedRegionTimingConfig): Animated.CompositeAnimation;
+    spring(config: AnimatedRegionSpringConfig): RNAnimated.CompositeAnimation;
+    timing(config: AnimatedRegionTimingConfig): RNAnimated.CompositeAnimation;
   }
 
   // =======================================================================
@@ -106,11 +133,11 @@ declare module "react-native-maps" {
     /** __iOS only__, optional region to render */
     region?: Region;
     /** image formats, defaults to 'png' */
-    format?: "png" | "jpg";
+    format?: 'png' | 'jpg';
     /** image quality: 0..1 (only relevant for jpg, default: 1) */
     quality?: number;
     /** result types, defaults to 'file' */
-    result?: "file" | "base64";
+    result?: 'file' | 'base64';
   }
 
   /**
@@ -164,6 +191,21 @@ declare module "react-native-maps" {
     position: Point;
   };
 
+  export type IndoorBuilding = {
+    underground: boolean;
+    activeLevelIndex: number;
+    levels: Array<IndoorLevel>;
+  };
+
+  export type IndoorLevel = {
+    index: number;
+    name: string;
+    shortName: string;
+  };
+
+  export interface IndoorBuildingEvent
+    extends NativeSyntheticEvent<{ IndoorBuilding: IndoorBuilding }> {}
+
   /**
    * onKmlReady parameter
    */
@@ -171,27 +213,33 @@ declare module "react-native-maps" {
     extends NativeSyntheticEvent<{ markers: KmlMarker[] }> {}
 
   type MapTypes =
-    | "standard"
-    | "satellite"
-    | "hybrid"
-    | "terrain"
-    | "none"
-    | "mutedStandard";
+    | 'standard'
+    | 'satellite'
+    | 'hybrid'
+    | 'terrain'
+    | 'none'
+    | 'mutedStandard';
 
   export interface MapViewProps extends ViewProperties {
-    provider?: "google" | null;
+    provider?: 'google' | null;
     customMapStyle?: MapStyleElement[];
     customMapStyleString?: string;
+    userLocationPriority?: 'balanced' | 'high' | 'low' | 'passive';
+    userLocationUpdateInterval?: number;
+    userInterfaceStyle?: 'light' | 'dark';
+    userLocationFastestInterval?: number;
     showsUserLocation?: boolean;
     userLocationAnnotationTitle?: string;
     showsMyLocationButton?: boolean;
     followsUserLocation?: boolean;
+    userLocationCalloutEnabled?: boolean;
     showsPointsOfInterest?: boolean;
     showsCompass?: boolean;
     zoomEnabled?: boolean;
     zoomTapEnabled?: boolean;
     zoomControlEnabled?: boolean;
     rotateEnabled?: boolean;
+    scrollDuringRotateOrZoomEnabled?: boolean;
     cacheEnabled?: boolean;
     loadingEnabled?: boolean;
     loadingBackgroundColor?: string;
@@ -212,15 +260,21 @@ declare module "react-native-maps" {
     initialCamera?: Camera;
     liteMode?: boolean;
     mapPadding?: EdgePadding;
+    paddingAdjustmentBehavior?: 'always' | 'automatic' | 'never';
     maxDelta?: number;
     minDelta?: number;
     legalLabelInsets?: EdgeInsets;
     compassOffset?: { x: number; y: number };
+    tintColor?: string;
 
+    onMapLoaded?: () => void;
     onMapReady?: () => void;
     onKmlReady?: (values: KmlMapEvent) => void;
-    onRegionChange?: (region: Region) => void;
-    onRegionChangeComplete?: (region: Region) => void;
+    onRegionChange?: (region: Region, details?: { isGesture: boolean }) => void;
+    onRegionChangeComplete?: (
+      region: Region,
+      details?: { isGesture: boolean }
+    ) => void;
     onPress?: (event: MapEvent) => void;
     onDoublePress?: (event: MapEvent) => void;
     onLongPress?: (event: MapEvent) => void;
@@ -228,18 +282,19 @@ declare module "react-native-maps" {
     onPanDrag?: (event: MapEvent) => void;
     onPoiClick?: (event: MapEvent<{ placeId: string; name: string }>) => void;
     onMarkerPress?: (
-      event: MapEvent<{ action: "marker-press"; id: string }>
+      event: MapEvent<{ action: 'marker-press'; id: string }>
     ) => void;
     onMarkerSelect?: (
-      event: MapEvent<{ action: "marker-select"; id: string }>
+      event: MapEvent<{ action: 'marker-select'; id: string }>
     ) => void;
     onMarkerDeselect?: (
-      event: MapEvent<{ action: "marker-deselect"; id: string }>
+      event: MapEvent<{ action: 'marker-deselect'; id: string }>
     ) => void;
-    onCalloutPress?: (event: MapEvent<{ action: "callout-press" }>) => void;
+    onCalloutPress?: (event: MapEvent<{ action: 'callout-press' }>) => void;
     onMarkerDragStart?: (event: MapEvent) => void;
     onMarkerDrag?: (event: MapEvent) => void;
     onMarkerDragEnd?: (event: MapEvent) => void;
+    onIndoorBuildingFocused?: (event: IndoorBuildingEvent) => void;
 
     minZoomLevel?: number;
     maxZoomLevel?: number;
@@ -247,6 +302,7 @@ declare module "react-native-maps" {
   }
 
   export default class MapView extends React.Component<MapViewProps, any> {
+    private __lastRegion?: Region;
     getCamera(): Promise<Camera>;
     setCamera(camera: Partial<Camera>): void;
     animateCamera(camera: Partial<Camera>, opts?: { duration?: number }): void;
@@ -260,7 +316,10 @@ declare module "react-native-maps" {
     animateToCoordinate(latLng: LatLng, duration?: number): void;
     animateToBearing(bearing: number, duration?: number): void;
     animateToViewingAngle(angle: number, duration?: number): void;
-    fitToElements(animated: boolean): void;
+    fitToElements(options?: {
+      edgePadding?: EdgePadding;
+      animated?: boolean;
+    }): void;
     fitToSuppliedMarkers(
       markers: string[],
       options?: { edgePadding?: EdgePadding; animated?: boolean }
@@ -272,11 +331,13 @@ declare module "react-native-maps" {
     setMapBoundaries(northEast: LatLng, southWest: LatLng): void;
     getMapBoundaries(): Promise<{ northEast: LatLng; southWest: LatLng }>;
     takeSnapshot(options?: SnapshotOptions): Promise<string>;
+    addressForCoordinate(coordinate: LatLng): Promise<Address>;
     pointForCoordinate(coordinate: LatLng): Promise<Point>;
     coordinateForPoint(point: Point): Promise<LatLng>;
+    setIndoorActiveLevelIndex(index: number): void;
   }
 
-  export class MapViewAnimated extends MapView {}
+  export class Animated extends MapView {}
 
   // =======================================================================
   //  Marker
@@ -298,17 +359,18 @@ declare module "react-native-maps" {
     calloutAnchor?: Point;
     flat?: boolean;
     draggable?: boolean;
+    tappable?: boolean;
     tracksViewChanges?: boolean;
     tracksInfoWindowChanges?: boolean;
     stopPropagation?: boolean;
-    onPress?: (event: MapEvent<{ action: "marker-press"; id: string }>) => void;
+    onPress?: (event: MapEvent<{ action: 'marker-press'; id: string }>) => void;
     onSelect?: (
-      event: MapEvent<{ action: "marker-select"; id: string }>
+      event: MapEvent<{ action: 'marker-select'; id: string }>
     ) => void;
     onDeselect?: (
-      event: MapEvent<{ action: "marker-deselect"; id: string }>
+      event: MapEvent<{ action: 'marker-deselect'; id: string }>
     ) => void;
-    onCalloutPress?: (event: MapEvent<{ action: "callout-press" }>) => void;
+    onCalloutPress?: (event: MapEvent<{ action: 'callout-press' }>) => void;
     onDragStart?: (event: MapEvent) => void;
     onDrag?: (event: MapEvent) => void;
     onDragEnd?: (event: MapEvent) => void;
@@ -332,6 +394,11 @@ declare module "react-native-maps" {
      */
     redrawCallout(): void;
     /**
+     * Causes a redraw of the marker. Useful when there are updates to the
+     * marker and `tracksViewChanges` comes with a cost that is too high.
+     */
+    redraw(): void;
+    /**
      * Animates marker movement.
      * __Android only__
      */
@@ -346,7 +413,7 @@ declare module "react-native-maps" {
 
   export interface MapCalloutProps extends ViewProperties {
     tooltip?: boolean;
-    onPress?: (event: MapEvent<{ action: "callout-press" }>) => void;
+    onPress?: (event: MapEvent<{ action: 'callout-press' }>) => void;
   }
 
   export class Callout extends React.Component<MapCalloutProps, any> {}
@@ -356,7 +423,7 @@ declare module "react-native-maps" {
   // =======================================================================
 
   export interface MapCalloutSubviewProps extends ViewProperties {
-    onPress?: (event: MapEvent<{ action: "callout-inside-press" }>) => void;
+    onPress?: (event: MapEvent<{ action: 'callout-inside-press' }>) => void;
   }
 
   export class CalloutSubview extends React.Component<
@@ -429,7 +496,9 @@ declare module "react-native-maps" {
     lineDashPattern?: number[];
   }
 
-  export class Circle extends React.Component<MapCircleProps, any> {}
+  export class Circle extends React.Component<MapCircleProps, any> {
+    setNativeProps: (props: any) => void;
+  }
 
   // =======================================================================
   //  UrlTile & LocalTile
@@ -437,9 +506,18 @@ declare module "react-native-maps" {
 
   export interface MapUrlTileProps extends ViewProperties {
     urlTemplate: string;
+    minimumZ?: number;
     maximumZ?: number;
+    maximumNativeZ?: number;
     zIndex?: number;
     tileSize?: number;
+    doubleTileSize?: boolean;
+    shouldReplaceMapContent?: boolean;
+    flipY?: boolean;
+    tileCachePath?: string;
+    tileCacheMaxAge?: number;
+    offlineMode?: boolean;
+    opacity?: number;
   }
 
   export class UrlTile extends React.Component<MapUrlTileProps, any> {}
@@ -459,11 +537,16 @@ declare module "react-native-maps" {
 
   export interface MapWMSTileProps extends ViewProperties {
     urlTemplate: string;
-    maximumZ?: number;
     minimumZ?: number;
-    tileSize: number;
-    opacity: number;
+    maximumZ?: number;
+    maximumNativeZ?: number;
     zIndex?: number;
+    tileSize?: number;
+    shouldReplaceMapContent?: boolean;
+    tileCachePath?: string;
+    tileCacheMaxAge?: number;
+    offlineMode?: boolean;
+    opacity?: number;
   }
 
   export class WMSTile extends React.Component<MapWMSTileProps, any> {}
@@ -476,8 +559,10 @@ declare module "react-native-maps" {
   export interface MapOverlayProps extends ViewProperties {
     image?: ImageURISource | ImageRequireSource;
     bounds: [Coordinate, Coordinate];
+    bearing?: number;
     tappable?: boolean;
-    onPress?: (event: MapEvent<{ action: "overlay-press"; }>) => void;
+    onPress?: (event: MapEvent<{ action: 'overlay-press' }>) => void;
+    opacity?: number;
   }
 
   export class Overlay extends React.Component<MapOverlayProps, any> {}
@@ -497,15 +582,40 @@ declare module "react-native-maps" {
   export interface MapHeatmapProps extends ViewProperties {
     points: WeightedLatLng[];
     gradient?: {
-      colors: string[],
-      startPoints: number[],
-      colorMapSize: number
-    }
+      colors: string[];
+      startPoints: number[];
+      colorMapSize: number;
+    };
     radius?: number;
     opacity?: number;
   }
 
   export class Heatmap extends React.Component<MapHeatmapProps, any> {}
+
+  // =======================================================================
+  //  Geojson
+  // =======================================================================
+
+  import GeoJSON from 'geojson';
+
+  export interface GeojsonProps {
+    geojson: GeoJSON.FeatureCollection;
+    strokeColor?: string;
+    fillColor?: string;
+    strokeWidth?: number;
+    lineDashPhase?: number;
+    lineDashPattern?: number[];
+    lineCap?: 'butt' | 'round' | 'square';
+    lineJoin?: 'miter' | 'round' | 'bevel';
+    miterLimit?: number;
+    zIndex?: number;
+    tappable?: boolean;
+    title?: string;
+    onPress?: (event: MapEvent) => void;
+    markerComponent?: React.ReactNode;
+  }
+
+  export class Geojson extends React.Component<GeojsonProps, any> {}
 
   // =======================================================================
   //  Constants
@@ -520,6 +630,8 @@ declare module "react-native-maps" {
     MUTEDSTANDARD: MapTypes;
   };
 
+  export const enableLatestRenderer: () => Promise<'LATEST' | 'LEGACY'> | void;
+
   export const PROVIDER_DEFAULT: null;
-  export const PROVIDER_GOOGLE: "google";
+  export const PROVIDER_GOOGLE: 'google';
 }
