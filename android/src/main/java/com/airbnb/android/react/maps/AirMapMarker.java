@@ -789,15 +789,15 @@ public class AirMapMarker extends AirMapFeature {
         String traffic = jsonObj.has("traffic") ? jsonObj.getString("traffic"): "0";
         String zoomLevel = jsonObj.has("zoomLevel") ? jsonObj.getString("zoomLevel"): "16";
         Boolean hasValetService = jsonObj.has("hasValetService") ? true: false;
-        JSONObject planned = jsonObj.getJSONObject("planned");
-        Boolean isPlanned = new Boolean(planned.getString("isPlanned"));
-        String plannedMarkerOutlineColor = planned.getString("outlineColor");
-        String plannedMarkerFillColor = planned.getString("fillColor");
+        JSONObject planned = jsonObj.has("planned") ? jsonObj.getJSONObject("planned") : null;
+        Boolean isPlanned = planned.has("isPlanned") ? new Boolean(planned.getString("isPlanned")) :false;
+        String plannedMarkerOutlineColor = planned.has("outlineColor") ? planned.getString("outlineColor") : "#D3D3D3"; // fallback to pale grey color
+        String plannedMarkerFillColor = planned.has("fillColor") ? planned.getString("fillColor") : "#ffffff"; // fallback to white color
         PlannedMarkerArgStructure plannedMarkerArgs = new PlannedMarkerArgStructure(isPlanned, plannedMarkerOutlineColor, plannedMarkerFillColor);
-        JSONObject maintenance = jsonObj.getJSONObject("maintenance");
-        Boolean isMaintenance = new Boolean(maintenance.getString("isMaintenance"));
-        String maintenanceMarkerOutlineColor = maintenance.getString("outlineColor");
-        String maintenanceMarkerFillColor = maintenance.getString("fillColor");
+        JSONObject maintenance = jsonObj.has("maintenance") ? jsonObj.getJSONObject("maintenance") : null;
+        Boolean isMaintenance = maintenance.has("isMaintenance") ? new Boolean(maintenance.getString("isMaintenance")) : false;
+        String maintenanceMarkerOutlineColor = maintenance.has("outlineColor") ? maintenance.getString("outlineColor") : "#D3D3D3"; // fallback to pale grey color
+        String maintenanceMarkerFillColor = maintenance.has("fillColor") ? maintenance.getString("fillColor") : "#ffffff"; // fallback to white color;
         MaintenanceMarkerArgStructure maintenanceMarkerArgs = new MaintenanceMarkerArgStructure(isMaintenance, maintenanceMarkerOutlineColor, maintenanceMarkerFillColor);
 
         String svgDataUrI = getCFSvg(hasValetService, Math.round(Float.parseFloat(level)), topOutline, bottomOutline, topInner, bottomInner, promotedMarkerArgs, depotType, Float.parseFloat(traffic), Integer.valueOf(zoomLevel), plannedMarkerArgs, maintenanceMarkerArgs);

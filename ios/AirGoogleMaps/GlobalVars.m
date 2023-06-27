@@ -39,12 +39,14 @@
 
 - (UIImage *) getCFMarker:(BOOL)hasValetService topOutline:(NSString *)topOutline bottomOutline:(NSString *)bottomOutline topInner:(NSString *)topInner bottomInner:(NSString *)bottomInner level:(NSString *)level promotedColor:(NSString *) promotedColor depotType:(NSString *) depotType traffic:(float) traffic zoomLevel:(NSInteger) zoomLevel planned:(NSDictionary *) planned maintenance:(NSDictionary *) maintenance {
     float markerLevel = [level floatValue];
-    NSString *plannedOutlineColor = planned[@"outlineColor"];
-    NSString *plannedFillColor = planned[@"fillColor"];
-    BOOL isPlanned = [planned[@"isPlanned"] boolValue];
-    NSString *maintenanceOutlineColor = maintenance[@"outlineColor"];
-    NSString *maintenanceFillColor = maintenance[@"fillColor"];
-    BOOL hasMaintenanceStation = [maintenance[@"isMaintenance"] boolValue];
+    NSArray *allKeysOfPlanned = [planned allKeys];
+    NSString *plannedOutlineColor = (planned != nil) ? planned[@"outlineColor"] : @"#D3D3D3"; // fallback to pale grey color
+    NSString *plannedFillColor = (planned != nil) ? planned[@"fillColor"] : @"#ffffff"; // fallback to white color
+    BOOL isPlanned = (planned != nil && [allKeysOfPlanned containsObject:@"isPlanned"]) ? [planned[@"isPlanned"] boolValue] : false;
+    NSArray *allKeysOfMaintenance = [maintenance allKeys];
+    NSString *maintenanceOutlineColor = (maintenance != nil) ? maintenance[@"outlineColor"] : @"#D3D3D3"; // fallback to pale grey color
+    NSString *maintenanceFillColor = (maintenance != nil) ? maintenance[@"fillColor"] : @"#ffffff"; // fallback to white color
+    BOOL hasMaintenanceStation = (maintenance != nil && [allKeysOfMaintenance containsObject:@"isMaintenance"]) ? [maintenance[@"isMaintenance"] boolValue] : false;
 
     if (hasValetService) {
       // svg with level 0
@@ -309,8 +311,10 @@
         NSString *trafficValue = jsonDictionary[@"traffic"];
         NSString *zoomLevelValue = jsonDictionary[@"zoomLevel"];
         BOOL hasValetService = [jsonDictionary[@"hasValetService"] boolValue];
-        NSDictionary *planned = (NSDictionary *)jsonDictionary[@"planned"];
-        NSDictionary *maintenance = (NSDictionary *)jsonDictionary[@"maintenance"];
+
+        NSArray *allKeys = [jsonDictionary allKeys];
+        NSDictionary *planned = ([allKeys containsObject:@"planned"]) ? (NSDictionary *)jsonDictionary[@"planned"] : nil;
+        NSDictionary *maintenance = ([allKeys containsObject:@"maintenance"]) ? (NSDictionary *)jsonDictionary[@"maintenance"] : nil;
         float traffic = [trafficValue floatValue];
         NSInteger zoomLevel = [zoomLevelValue integerValue];
 
