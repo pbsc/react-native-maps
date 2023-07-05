@@ -37,8 +37,16 @@
 }
 
 
-- (UIImage *) getCFMarker:(BOOL)hasValetService topOutline:(NSString *)topOutline bottomOutline:(NSString *)bottomOutline topInner:(NSString *)topInner bottomInner:(NSString *)bottomInner level:(NSString *)level promotedColor:(NSString *) promotedColor depotType:(NSString *) depotType traffic:(float) traffic zoomLevel:(NSInteger) zoomLevel {
+- (UIImage *) getCFMarker:(BOOL)hasValetService topOutline:(NSString *)topOutline bottomOutline:(NSString *)bottomOutline topInner:(NSString *)topInner bottomInner:(NSString *)bottomInner level:(NSString *)level promotedColor:(NSString *) promotedColor depotType:(NSString *) depotType traffic:(float) traffic zoomLevel:(NSInteger) zoomLevel planned:(NSDictionary *) planned maintenance:(NSDictionary *) maintenance {
     float markerLevel = [level floatValue];
+    NSArray *allKeysOfPlanned = [planned allKeys];
+    NSString *plannedOutlineColor = (planned != nil) ? planned[@"outlineColor"] : @"#D3D3D3"; // fallback to pale grey color
+    NSString *plannedFillColor = (planned != nil) ? planned[@"fillColor"] : @"#ffffff"; // fallback to white color
+    BOOL isPlanned = (planned != nil && [allKeysOfPlanned containsObject:@"isPlanned"]) ? [planned[@"isPlanned"] boolValue] : false;
+    NSArray *allKeysOfMaintenance = [maintenance allKeys];
+    NSString *maintenanceOutlineColor = (maintenance != nil) ? maintenance[@"outlineColor"] : @"#D3D3D3"; // fallback to pale grey color
+    NSString *maintenanceFillColor = (maintenance != nil) ? maintenance[@"fillColor"] : @"#ffffff"; // fallback to white color
+    BOOL hasMaintenanceStation = (maintenance != nil && [allKeysOfMaintenance containsObject:@"isMaintenance"]) ? [maintenance[@"isMaintenance"] boolValue] : false;
 
     if (hasValetService) {
       // svg with level 0
@@ -75,6 +83,42 @@
       return [SVGKImage imageWithSource:source].UIImage;
     }
 
+    if(isPlanned) {
+      // svg with level 0
+      NSString *svgSrc = @"";
+
+      svgSrc = [svgSrc stringByAppendingString: @"<svg width='25' height='100' version=\"1.1\" viewBox=\"0 -115 210 300\" xml:space=\"preserve\" xmlns=\"http://www.w3.org/2000/svg\"><defs><clipPath id=\"clipPath3003\"><path d=\"m0 68h25v-68h-25z\"/></clipPath></defs><path transform=\"matrix(8.3806 0 0 -8.3806 186.67 100.15)\" d=\"m0 0c-1.142 4.194-5.072 7.311-9.746 7.311s-8.605-3.117-9.747-7.311c-0.223-0.819-0.336-1.665-0.336-2.515 0-1.48 0.25-3.112 0.706-4.793 0.713-2.561 1.758-5.019 3.107-7.309 1.732-2.96 3.913-5.603 6.27-7.31 2.353 1.707 4.539 4.348 6.27 7.31 1.349 2.29 2.394 4.748 3.107 7.309 0.455 1.681 0.706 3.313 0.706 4.793 0 0.85-0.112 1.696-0.337 2.515\" fill=\"%1$@\"/><g><path transform=\"matrix(6.2854 0 0 6.2854 .23874 -134.73)\" d=\"m16.682 25.604c-0.676-4e-3 -1.4218 0.04791-2.1191 0.14258l0.26953 1.9824c0.60533-0.08267 1.2239-0.125 1.8359-0.125 0.63067-0.016 1.2827 0.0441 1.916 0.13476l0.28125-1.9785c-0.72-0.10267-1.4543-0.15625-2.1836-0.15625zm-4.9219 0.79492c-1.368 0.45733-2.6655 1.1044-3.8535 1.9258l1.1367 1.6445c1.032-0.71333 2.1609-1.2765 3.3516-1.6738zm9.9043 0.0293-0.64648 1.8945c1.188 0.404 2.3118 0.97336 3.3398 1.6934l1.1465-1.6387c-1.1813-0.82667-2.4745-1.4839-3.8398-1.9492zm-15.963 3.7441c-1.0187 1.032-1.8812 2.1982-2.5625 3.4648l1.7617 0.94726c0.59067-1.0987 1.3412-2.1099 2.2266-3.0059zm21.994 0.06641-1.4316 1.3945c0.88 0.90267 1.623 1.9188 2.207 3.0215l1.7676-0.9375c-0.67467-1.2707-1.5296-2.4412-2.543-3.4785zm-25.672 6.0566c-0.12133 0.392-0.22583 0.79265-0.3125 1.1953-0.22133 1.0093-0.3377 2.0429-0.3457 3.0723l2 0.01172c0.00667-0.88933 0.10683-1.7822 0.29883-2.6582 0.076-0.34933 0.16748-0.69258 0.27148-1.0312zm29.313 0.0918-1.916 0.57617c0.09333 0.31467 0.178 0.63303 0.25 0.95703 0.19867 0.896 0.29883 1.8183 0.29883 2.7383h2c0-1.0653-0.11832-2.1326-0.34766-3.1699-0.08133-0.372-0.17582-0.74023-0.28516-1.1016zm-27.814 6.75-1.9863 0.24023c0.148 1.2213 0.39314 2.5051 0.73047 3.8145l0.074219 0.2793 1.9336-0.50976-0.070312-0.26758c-0.316-1.2253-0.54564-2.422-0.68164-3.5566zm26.279 0.08594c-0.136 1.1027-0.36059 2.2694-0.66992 3.4707l-0.09375 0.35352 1.9316 0.51953 0.09766-0.37695c0.32933-1.2813 0.57341-2.5327 0.71875-3.7207zm-24.758 6.2383-1.8887 0.66016c0.444 1.2747 0.96669 2.5627 1.5547 3.832l1.8145-0.8418c-0.56-1.2093-1.0578-2.4371-1.4805-3.6504zm23.217 0.08594c-0.424 1.2067-0.9249 2.4345-1.4902 3.6465l1.8125 0.84766c0.59333-1.2733 1.1197-2.5627 1.5664-3.832zm-20.557 5.918-1.7598 0.95117 0.13672 0.25195c0.62 1.128 1.2915 2.2344 1.9941 3.2891l1.6641-1.1094c-0.672-1.0067-1.3116-2.0625-1.9062-3.1465zm17.879 0.08593-0.08203 0.15234c-0.608 1.1067-1.2677 2.1914-1.957 3.2207l1.6641 1.1133c0.72-1.0787 1.4077-2.212 2.041-3.3613l0.0957-0.17969zm-14.316 5.4375-1.5898 1.2129c0.86533 1.1333 1.7707 2.1955 2.6934 3.1582l1.4453-1.3828c-0.87067-0.90933-1.7288-1.9149-2.5488-2.9883zm10.748 0.07422c-0.81867 1.0667-1.678 2.0678-2.5566 2.9785l1.4414 1.3887c0.93067-0.96533 1.8391-2.0257 2.7031-3.1523zm-6.2559 4.7656-1.3066 1.5137c0.53467 0.46267 1.0757 0.89421 1.625 1.2969l0.58984 0.43359 0.5918-0.43359c0.548-0.40133 1.0903-0.83421 1.625-1.2969l-1.3066-1.5137c-0.30133 0.26-0.60482 0.51-0.91016 0.75-0.30533-0.24-0.6082-0.49-0.9082-0.75z\" fill=\"%2$@\"/></g><g transform=\"matrix(1.3333 0 0 -1.3333 0 90.667)\"><g transform=\"matrix(6.2856 0 0 6.2856 .17906 -258.37)\"><g clip-path=\"url(#clipPath3003)\"/></g></g>"];
+
+        
+
+      svgSrc = [svgSrc stringByAppendingString:@"</svg>"];
+      
+      NSString *svgString = [svgSrc stringByReplacingOccurrencesOfString:@"%1$@" withString:plannedFillColor];
+      svgString = [svgString stringByReplacingOccurrencesOfString:@"%2$@" withString:plannedOutlineColor];
+
+      svgString = [svgString stringByReplacingOccurrencesOfString:@"%4$@" withString:plannedOutlineColor];
+
+      
+      SVGKSource *source = [SVGKSourceString sourceFromContentsOfString:svgString];
+      return [SVGKImage imageWithSource:source].UIImage;
+    }
+    if(hasMaintenanceStation) {
+      // svg with level 0
+      NSString *svgSrc = @"";
+      svgSrc = [svgSrc stringByAppendingString: @"<svg xmlns='http://www.w3.org/2000/svg' xmlns:svg='http://www.w3.org/2000/svg' width='25' height='100' viewBox='0 -115 210 300'><path fill='%1$@' d='M186.873,99.819C177.278,64.59,144.263,38.412,105,38.412S32.722,64.59,23.127,99.819          c-1.876,6.884-2.824,13.991-2.824,21.126c0,12.437,2.102,26.143,5.929,40.266c5.992,21.511,14.767,42.153,26.103,61.396          c14.546,24.859,32.87,47.06,52.666,61.402c19.766-14.343,38.132-36.521,52.67-61.402c11.332-19.242,20.103-39.885,26.095-61.396          c3.819-14.123,5.932-27.829,5.932-40.266C189.696,113.811,188.753,106.703,186.873,99.819z'/><path fill='%2$@' d='M198.715,99.819C189.427,57.826,151.048,26.081,105,26.081c-46.045,0-84.424,31.746-93.719,73.739          c-1.431,6.46-2.153,13.059-2.153,19.677c0,13.08,2.063,27.218,5.827,41.715c5.284,20.38,13.932,41.479,24.953,61.396          C57.102,253.652,80.081,281.904,105,300c24.941-18.096,47.898-46.303,65.088-77.394c11.025-19.916,19.669-41.016,24.956-61.396          c3.761-14.497,5.828-28.635,5.828-41.715C200.872,112.878,200.152,106.279,198.715,99.819z M157.625,222.606          c-14.531,24.859-32.866,47.06-52.663,61.402c-19.766-14.343-38.12-36.521-52.665-61.402          c-11.321-19.242-20.085-39.885-26.065-61.396c-3.827-14.123-5.929-27.829-5.929-40.266c0-7.135,0.948-14.242,2.824-21.126          C32.722,64.59,65.737,38.412,105,38.412s72.278,26.178,81.873,61.407c1.88,6.884,2.823,13.991,2.823,21.126          c0,12.437-2.112,26.143-5.932,40.266c-5.992,21.511-14.763,42.153-26.095,61.396H157.625z'/>"];
+        
+
+      svgSrc = [svgSrc stringByAppendingString:@"</svg>"];
+      
+      NSString *svgString = [svgSrc stringByReplacingOccurrencesOfString:@"%1$@" withString:maintenanceFillColor];
+      svgString = [svgString stringByReplacingOccurrencesOfString:@"%2$@" withString:maintenanceOutlineColor];
+
+      svgString = [svgString stringByReplacingOccurrencesOfString:@"%4$@" withString:maintenanceOutlineColor];
+
+      
+      SVGKSource *source = [SVGKSourceString sourceFromContentsOfString:svgString];
+      return [SVGKImage imageWithSource:source].UIImage;
+    }
     if (markerLevel == 0) {
       // svg with level 0
         NSString *svgSrc = @"";
@@ -268,10 +312,25 @@
         NSString *zoomLevelValue = jsonDictionary[@"zoomLevel"];
         BOOL hasValetService = [jsonDictionary[@"hasValetService"] boolValue];
 
+        NSArray *allKeys = [jsonDictionary allKeys];
+        NSDictionary *planned = ([allKeys containsObject:@"planned"]) ? (NSDictionary *)jsonDictionary[@"planned"] : nil;
+        NSDictionary *maintenance = ([allKeys containsObject:@"maintenance"]) ? (NSDictionary *)jsonDictionary[@"maintenance"] : nil;
         float traffic = [trafficValue floatValue];
         NSInteger zoomLevel = [zoomLevelValue integerValue];
 
-        newImage = [self getCFMarker:hasValetService topOutline:topOutline bottomOutline:bottomOutline topInner:topInner bottomInner:bottomInner level:level promotedColor:(isPromoted ? promotedColor : nil) depotType:depotType traffic:traffic zoomLevel:zoomLevel];
+        newImage = [self getCFMarker:hasValetService 
+                        topOutline:topOutline 
+                        bottomOutline:bottomOutline 
+                        topInner:topInner 
+                        bottomInner:bottomInner 
+                        level:level 
+                        promotedColor:(isPromoted ? promotedColor : nil) 
+                        depotType:depotType 
+                        traffic:traffic 
+                        zoomLevel:zoomLevel
+                        planned: planned
+                        maintenance: maintenance
+                    ];
       }
     }
     dict[imageSrc] = newImage;
