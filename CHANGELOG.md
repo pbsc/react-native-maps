@@ -1,5 +1,82 @@
 # Changelog
 
+## [1.10.3](https://github.com/react-native-maps/react-native-maps/compare/v1.10.2...v1.10.3) (2024-02-18)
+
+
+### Bug Fixes
+
+* **animation:** Marker Animation using reanimated ([#4974](https://github.com/react-native-maps/react-native-maps/issues/4974)) ([7455ed0](https://github.com/react-native-maps/react-native-maps/commit/7455ed022117cbb45d232bc0f2a8ac5982bb8fd6))
+
+## [1.10.2](https://github.com/react-native-maps/react-native-maps/compare/v1.10.1...v1.10.2) (2024-02-10)
+
+
+### Bug Fixes
+
+* **AIRMap:** support iOS MapKit zoomConstraints for better zoom handling especially for 3d maps ([#4905](https://github.com/react-native-maps/react-native-maps/issues/4905)) ([d83e1a9](https://github.com/react-native-maps/react-native-maps/commit/d83e1a9f4e5e93e0826ec810a35688eb6b4b4026))
+
+## [1.10.1](https://github.com/react-native-maps/react-native-maps/compare/v1.10.0...v1.10.1) (2024-02-04)
+
+
+### Bug Fixes
+
+* EdgePadding types ([#4956](https://github.com/react-native-maps/react-native-maps/issues/4956)) ([de9e205](https://github.com/react-native-maps/react-native-maps/commit/de9e205c0955aee1951426bb9bf78440acac7119))
+
+# [1.10.0](https://github.com/react-native-maps/react-native-maps/compare/v1.9.1...v1.10.0) (2024-01-21)
+
+
+### Features
+
+* **map:** add numberOfTouches to onPanDrag event on iOS ([#4934](https://github.com/react-native-maps/react-native-maps/issues/4934)) ([13f3903](https://github.com/react-native-maps/react-native-maps/commit/13f39030e35472ec639733ba3c469ae51283d806))
+
+## [1.9.1](https://github.com/react-native-maps/react-native-maps/compare/v1.9.0...v1.9.1) (2024-01-05)
+
+
+### Bug Fixes
+
+* crash due to casting subview in iOS AIRGoogleMapMarker.m ([#4930](https://github.com/react-native-maps/react-native-maps/issues/4930)) ([4f38bd5](https://github.com/react-native-maps/react-native-maps/commit/4f38bd54e61bd93e26708c4d317ced3fa632cea9))
+
+# [1.9.0](https://github.com/react-native-maps/react-native-maps/compare/v1.8.4...v1.9.0) (2024-01-02)
+
+
+### Features
+
+* **googleMaps:** add support for the new Google's cloud based maps / styling via googleMapId prop ([77610e9](https://github.com/react-native-maps/react-native-maps/commit/77610e96360a7cba3df72e8082d0eb4cae310d38))
+
+## [1.8.4](https://github.com/react-native-maps/react-native-maps/compare/v1.8.3...v1.8.4) (2023-12-15)
+
+
+### Bug Fixes
+
+* **AIRMap:** fix location change timestamp ([7e5fb71](https://github.com/react-native-maps/react-native-maps/commit/7e5fb712f6f38973b666b406d904f51934f0fb55))
+
+## [1.8.3](https://github.com/react-native-maps/react-native-maps/compare/v1.8.2...v1.8.3) (2023-12-07)
+
+
+### Bug Fixes
+
+* add missing subThoroughfare to Address type ([435798b](https://github.com/react-native-maps/react-native-maps/commit/435798b58cb7907cb43caf75fec6286fe0840d28))
+
+## [1.8.2](https://github.com/react-native-maps/react-native-maps/compare/v1.8.1...v1.8.2) (2023-12-07)
+
+
+### Bug Fixes
+
+* **ios:** update google-maps-ios-utils version to 4.2.2 ([28f59c9](https://github.com/react-native-maps/react-native-maps/commit/28f59c9891ddd9f4f4774e1b4104f44d26f466f3))
+
+## [1.8.1](https://github.com/react-native-maps/react-native-maps/compare/v1.8.0...v1.8.1) (2023-12-06)
+
+
+### Bug Fixes
+
+* **example:** fix typo in AndroidManifest.xml for ACCESS_COARSE_LOCATION permission ([a4a0f0d](https://github.com/react-native-maps/react-native-maps/commit/a4a0f0d91b9098b18081aab493a70008b0ca1436))
+
+# [1.8.0](https://github.com/react-native-maps/react-native-maps/compare/v1.7.1...v1.8.0) (2023-10-09)
+
+
+### Features
+
+* **android:** Add android namespace to support react-native 0.73 ([#4859](https://github.com/react-native-maps/react-native-maps/issues/4859)) ([1c6c13d](https://github.com/react-native-maps/react-native-maps/commit/1c6c13d05705ed73c5ffdaf9f26648b44b7cb523))
+
 ## [1.7.1](https://github.com/react-native-maps/react-native-maps/compare/v1.7.0...v1.7.1) (2023-04-23)
 
 
