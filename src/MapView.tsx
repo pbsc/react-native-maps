@@ -57,6 +57,7 @@ import {
 } from './MapView.types';
 import {Modify} from './sharedTypesInternal';
 import {Commands, MapViewNativeComponentType} from './MapViewNativeComponent';
+import AnimatedRegion from './AnimatedRegion';
 
 export const MAP_TYPES: MapTypes = {
   STANDARD: 'standard',
@@ -119,6 +120,16 @@ export type MapViewProps = ViewProps & {
   followsUserLocation?: boolean;
 
   /**
+   * If `false` the map will not capture PoI clicks
+   * This can improve click handling on the map for android
+   *
+   * @default true
+   * @platform iOS: Not supported
+   * @platform Android: supported
+   */
+  poiClickEnabled?: boolean;
+
+  /**
    * The initial camera view the map should use.  Use this prop instead of `camera`
    * only if you don't want to control the camera of the map besides the initial view.
    *
@@ -178,10 +189,19 @@ export type MapViewProps = ViewProps & {
   googleMapId?: string;
 
   /**
+   * https://developers.google.com/maps/documentation/android-sdk/renderer
+   * google maps renderer
+   * @default `LATEST`
+   * @platform iOS: Not supported
+   * @platform Android: Supported
+   */
+  googleRenderer?: 'LATEST' | 'LEGACY';
+
+  /**
    * Sets loading background color.
    *
    * @default `#FFFFFF`
-   * @platform iOS: Apple Maps only
+   * @platform iOS: Supported
    * @platform Android: Supported
    */
   loadingBackgroundColor?: string;
@@ -337,8 +357,8 @@ export type MapViewProps = ViewProps & {
    * Callback that is called when a marker on the map becomes deselected.
    * This will be called when the callout for that marker is about to be hidden.
    *
-   * @platform iOS: Apple Maps only
-   * @platform Android: Not supported
+   * @platform iOS: Supported
+   * @platform Android: Supported
    */
   onMarkerDeselect?: (event: MarkerDeselectEvent) => void;
 
@@ -379,8 +399,8 @@ export type MapViewProps = ViewProps & {
    * Callback that is called when a marker on the map becomes selected.
    * This will be called when the callout for that marker is about to be shown.
    *
-   * @platform iOS: Apple Maps only.
-   * @platform Android: Not supported
+   * @platform iOS: Supported.
+   * @platform Android: Supported
    */
   onMarkerSelect?: (event: MarkerSelectEvent) => void;
 
@@ -408,6 +428,16 @@ export type MapViewProps = ViewProps & {
    * @platform Android: Supported
    */
   onPress?: (event: MapPressEvent) => void;
+
+  /**
+   * Callback that is called once before the region changes, such as when the user starts moving the map.
+   * `isGesture` property indicates if the move was from the user (true) or an animation (false).
+   * **Note**: `isGesture` is supported by Google Maps only.
+   *
+   * @platform iOS: Supported
+   * @platform Android: Supported
+   */
+  onRegionChangeStart?: (event: NativeSyntheticEvent<Details>) => void;
 
   /**
    * Callback that is called continuously when the region changes, such as when a user is dragging the map.
@@ -472,7 +502,7 @@ export type MapViewProps = ViewProps & {
    * @platform iOS: Supported
    * @platform Android: Supported
    */
-  region?: Region;
+  region?: Region | AnimatedRegion;
 
   /**
    * If `false` the user won't be able to adjust the camera’s pitch angle.
@@ -1059,6 +1089,7 @@ class MapView extends React.Component<MapViewProps, State> {
         onMapReady: this._onMapReady,
         liteMode: this.props.liteMode,
         googleMapId: this.props.googleMapId,
+        googleRenderer: this.props.googleRenderer,
         ref: this.map,
         customMapStyleString: this.props.customMapStyle
           ? JSON.stringify(this.props.customMapStyle)
@@ -1082,6 +1113,7 @@ class MapView extends React.Component<MapViewProps, State> {
         region: null,
         liteMode: this.props.liteMode,
         googleMapId: this.props.googleMapId,
+        googleRenderer: this.props.googleRenderer,
         initialRegion: this.props.initialRegion || null,
         initialCamera: this.props.initialCamera,
         ref: this.map,
@@ -1124,13 +1156,6 @@ const getNativeMapComponent = (provider: Provider) =>
   airMaps[provider || 'default'];
 
 export const AnimatedMapView = RNAnimated.createAnimatedComponent(MapView);
-
-export const enableLatestRenderer = () => {
-  if (Platform.OS !== 'android') {
-    return;
-  }
-  return NativeModules.AirMapModule.enableLatestRenderer();
-};
 
 MapView.Animated = AnimatedMapView;
 
