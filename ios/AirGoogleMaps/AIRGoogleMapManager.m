@@ -117,6 +117,7 @@ RCT_EXPORT_VIEW_PROPERTY(onChange, RCTBubblingEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onMarkerPress, RCTDirectEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onMarkerSelect, RCTDirectEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onMarkerDeselect, RCTDirectEventBlock)
+RCT_EXPORT_VIEW_PROPERTY(onRegionChangeStart, RCTDirectEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onRegionChange, RCTDirectEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onRegionChangeComplete, RCTDirectEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onPoiClick, RCTDirectEventBlock)
@@ -160,8 +161,8 @@ RCT_EXPORT_METHOD(setCamera:(nonnull NSNumber *)reactTag
             RCTLogError(@"Invalid view returned from registry, expecting AIRGoogleMap, got: %@", view);
         } else {
             AIRGoogleMap *mapView = (AIRGoogleMap *)view;
-            GMSCameraPosition *camera = [RCTConvert GMSCameraPositionWithDefaults:json existingCamera:[mapView camera]];
-            [mapView setCamera:camera];
+            GMSCameraPosition *camera = [RCTConvert GMSCameraPositionWithDefaults:json existingCamera:[mapView cameraProp]];
+            [mapView setCameraProp:camera];
         }
     }];
 }
@@ -179,7 +180,7 @@ RCT_EXPORT_METHOD(animateCamera:(nonnull NSNumber *)reactTag
             [CATransaction begin];
             [CATransaction setAnimationDuration:duration/1000];
             AIRGoogleMap *mapView = (AIRGoogleMap *)view;
-            GMSCameraPosition *camera = [RCTConvert GMSCameraPositionWithDefaults:json existingCamera:[mapView camera]];
+            GMSCameraPosition *camera = [RCTConvert GMSCameraPositionWithDefaults:json existingCamera:[mapView cameraProp]];
             [mapView animateToCameraPosition:camera];
             [CATransaction commit];
         }
@@ -511,8 +512,10 @@ RCT_EXPORT_METHOD(setIndoorActiveLevelIndex:(nonnull NSNumber *)reactTag
   return @{ @"legalNotice": [GMSServices openSourceLicenseInfo] };
 }
 
-- (void)mapView:(GMSMapView *)mapView willMove:(BOOL)gesture{
-    self.isGesture = gesture;
+- (void)mapView:(GMSMapView *)mapView willMove:(BOOL)gesture {
+  self.isGesture = gesture;
+  AIRGoogleMap *googleMapView = (AIRGoogleMap *)mapView;
+  [googleMapView willMove:gesture];
 }
 
 - (void)mapViewDidStartTileRendering:(GMSMapView *)mapView {

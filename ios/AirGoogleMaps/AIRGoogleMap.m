@@ -97,7 +97,6 @@ id regionAsJSON(MKCoordinateRegion region) {
     _tiles = [NSMutableArray array];
     _overlays = [NSMutableArray array];
     _initialCamera = nil;
-    _cameraProp = nil;
     _initialRegion = MKCoordinateRegionMake(CLLocationCoordinate2DMake(0.0, 0.0), MKCoordinateSpanMake(0.0, 0.0));
     _region = MKCoordinateRegionMake(CLLocationCoordinate2DMake(0.0, 0.0), MKCoordinateSpanMake(0.0, 0.0));
     _initialRegionSet = false;
@@ -315,9 +314,19 @@ id regionAsJSON(MKCoordinateRegion region) {
     _googleMapId = googleMapId;
 }
 
+- (GMSCameraPosition *)cameraProp {
+    if(_didLayoutSubviews) {
+      return self.camera;
+    } else {
+      return _initialCamera;
+    }
+}
+
 - (void)setCameraProp:(GMSCameraPosition*)camera {
     _initialCamera = camera;
-    self.camera = camera;
+    if(_didLayoutSubviews) {
+      self.camera = camera;
+    }
 }
 
 - (void)setOnMapReady:(RCTBubblingEventBlock)onMapReady {
@@ -392,6 +401,11 @@ id regionAsJSON(MKCoordinateRegion region) {
 - (void)didLongPressAtCoordinate:(CLLocationCoordinate2D)coordinate {
   if (!self.onLongPress) return;
   self.onLongPress([self eventFromCoordinate:coordinate]);
+}
+
+- (void)willMove:(BOOL)gesture {
+  id event = @{@"isGesture": [NSNumber numberWithBool:gesture]};
+  if (self.onRegionChangeStart) self.onRegionChangeStart(event);
 }
 
 - (void)didChangeCameraPosition:(GMSCameraPosition *)position isGesture:(BOOL)isGesture{
