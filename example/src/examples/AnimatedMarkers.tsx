@@ -1,14 +1,15 @@
-import React, { useState, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
-import { AnimatedRegion } from 'react-native-maps';
+import React, {useState, useRef} from 'react';
+import {View, Text, TouchableOpacity, StyleSheet, Platform} from 'react-native';
+import MapView, {Marker} from 'react-native-maps';
+import {AnimatedRegion} from 'react-native-maps';
 
 const LATITUDE = 37.78825; // example value
 const LONGITUDE = -122.4324; // example value
 const LATITUDE_DELTA = 0.0922; // example value
 const LONGITUDE_DELTA = 0.0421; // example value
 
-const AnimatedMarkers = ({ provider }: { provider: any }) => {
+// prettier-ignore
+const AnimatedMarkers = ({provider}: {provider: any}) => {
   const [coordinate, setCoordinate] = useState(
     new AnimatedRegion({
       latitude: LATITUDE,
