@@ -1,83 +1,67 @@
-import React from 'react';
-import {
-  StyleSheet,
-  View,
-  Text,
-  Dimensions,
-  TouchableOpacity,
-  Platform,
-} from 'react-native';
+import React, { useState, useRef } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import MapView, { Marker } from 'react-native-maps';
+import { AnimatedRegion } from 'react-native-maps';
 
-import MapView, {Marker, AnimatedRegion} from 'react-native-maps';
+const LATITUDE = 37.78825; // example value
+const LONGITUDE = -122.4324; // example value
+const LATITUDE_DELTA = 0.0922; // example value
+const LONGITUDE_DELTA = 0.0421; // example value
 
-const screen = Dimensions.get('window');
+const AnimatedMarkers = ({ provider }: { provider: any }) => {
+  const [coordinate, setCoordinate] = useState(
+    new AnimatedRegion({
+      latitude: LATITUDE,
+      longitude: LONGITUDE,
+    })
+  );
 
-const ASPECT_RATIO = screen.width / screen.height;
-const LATITUDE = 37.78825;
-const LONGITUDE = -122.4324;
-const LATITUDE_DELTA = 0.0922;
-const LONGITUDE_DELTA = LATITUDE_DELTA * ASPECT_RATIO;
+  const markerRef = useRef<any>(null);
 
-class AnimatedMarkers extends React.Component<any, any> {
-  marker: any;
-  constructor(props: any) {
-    super(props);
-
-    this.state = {
-      coordinate: new AnimatedRegion({
-        latitude: LATITUDE,
-        longitude: LONGITUDE,
-      }),
-    };
-  }
-
-  animate() {
-    const {coordinate} = this.state;
+  const animate = () => {
     const newCoordinate = {
       latitude: LATITUDE + (Math.random() - 0.5) * (LATITUDE_DELTA / 2),
       longitude: LONGITUDE + (Math.random() - 0.5) * (LONGITUDE_DELTA / 2),
     };
 
     if (Platform.OS === 'android') {
-      if (this.marker) {
-        this.marker._component.animateMarkerToCoordinate(newCoordinate, 500);
+      if (markerRef.current) {
+        markerRef.current._component.animateMarkerToCoordinate(newCoordinate, 500);
       }
     } else {
       // `useNativeDriver` defaults to false if not passed explicitly
       coordinate.timing({...newCoordinate, useNativeDriver: true}).start();
     }
-  }
+  };
 
-  render() {
-    return (
-      <View style={styles.container}>
-        <MapView
-          provider={this.props.provider}
-          style={styles.map}
-          initialRegion={{
-            latitude: LATITUDE,
-            longitude: LONGITUDE,
-            latitudeDelta: LATITUDE_DELTA,
-            longitudeDelta: LONGITUDE_DELTA,
-          }}>
-          <Marker.Animated
-            ref={(marker: any) => {
-              this.marker = marker;
-            }}
-            coordinate={this.state.coordinate}
-          />
-        </MapView>
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity
-            onPress={() => this.animate()}
-            style={[styles.bubble, styles.button]}>
-            <Text>Animate</Text>
-          </TouchableOpacity>
-        </View>
+  return (
+    <View style={styles.container}>
+      <MapView
+        provider={provider}
+        style={styles.map}
+        initialRegion={{
+          latitude: LATITUDE,
+          longitude: LONGITUDE,
+          latitudeDelta: LATITUDE_DELTA,
+          longitudeDelta: LONGITUDE_DELTA,
+        }}
+      >
+        <Marker.Animated
+          ref={markerRef}
+          coordinate={coordinate}
+        />
+      </MapView>
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity
+          onPress={animate}
+          style={[styles.bubble, styles.button]}
+        >
+          <Text>Animate</Text>
+        </TouchableOpacity>
       </View>
-    );
-  }
-}
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
