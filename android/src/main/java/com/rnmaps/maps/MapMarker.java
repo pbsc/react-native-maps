@@ -53,6 +53,11 @@ import com.caverock.androidsvg.SVGParseException;
 import org.json.JSONException;
 import org.json.JSONObject;
 import com.google.maps.android.collections.MarkerManager;
+import com.facebook.imagepipeline.image.ImmutableQualityInfo;
+import com.facebook.imagepipeline.image.ImageInfoImpl;
+import androidx.annotation.NonNull;
+import java.util.HashMap;
+import java.util.Map;
 
 public class MapMarker extends MapFeature {
 
@@ -510,6 +515,10 @@ public class MapMarker extends MapFeature {
     }
   }
 
+  public LatLng getPosition() {
+    return position;
+  }
+
   public boolean updateCustomForTracking() {
     if (!tracksViewChangesActive)
       return false;
@@ -525,7 +534,8 @@ public class MapMarker extends MapFeature {
     marker.setIcon(getIcon());
   }
 
-  public static class CloseableSvgImage extends CloseableImage {
+   public static class CloseableSvgImage implements CloseableImage {
+    private Map<String, Object> mExtras = new HashMap<>();
 
     private final SVG mSvg;
 
@@ -555,6 +565,11 @@ public class MapMarker extends MapFeature {
     }
 
     @Override
+    public boolean isStateful() {
+      return false;
+    }
+
+    @Override
     public int getWidth() {
       return 0;
     }
@@ -563,7 +578,64 @@ public class MapMarker extends MapFeature {
     public int getHeight() {
       return 0;
     }
+
+    @Override
+    public QualityInfo getQualityInfo() {
+      return ImmutableQualityInfo.FULL_QUALITY;
+    }
+
+    @Override
+    public ImageInfo getImageInfo() {
+      return new ImageInfoImpl(0, 0, 0, getQualityInfo(), mExtras);
+    }
+
+    @Override
+    public void putExtras(@NonNull Map<String, ?> map) {
+      if (map == null) {
+        return;
+      }
+
+
+      for (String extra : mExtras.keySet()) {
+        Object val = map.get(extra);
+        if (val == null) {
+          continue;
+        }
+        mExtras.put(extra, val);
+      }
+
+    }
+
+    @Nullable
+    @Override
+    public <E> E getExtra(@NonNull String s) {
+      return mExtras.get(s) != null ? (E) mExtras.get(s) : null;
+    }
+
+    @Nullable
+    @Override
+    public <E> E getExtra(@NonNull String s, @Nullable E e) {
+      E value = (E) mExtras.get(s);
+
+      return value != null ? value : e;
+    }
+
+    @Override
+    public <E> void putExtra(@NonNull String s, @Nullable E e) {
+      if (mExtras == null) {
+        return;
+      }
+        mExtras.put(s, e);
+    }
+
+    @NonNull
+    @Override
+    public Map<String, Object> getExtras() {
+      return mExtras;
+    }
+
   }
+
 
   public static class SvgDecoder implements ImageDecoder {
 

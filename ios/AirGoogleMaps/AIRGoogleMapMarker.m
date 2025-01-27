@@ -25,7 +25,6 @@ CGRect unionRect(CGRect a, CGRect b) {
 }
 
 @interface AIRGoogleMapMarker ()
-- (id)eventFromMarker:(AIRGMSMarker*)marker;
 @end
 
 @implementation AIRGoogleMapMarker {
@@ -61,23 +60,7 @@ CGRect unionRect(CGRect a, CGRect b) {
   [_iconView setFrame:CGRectMake(0, 0, width, height)];
 }
 
-- (id)eventFromMarker:(AIRGMSMarker*)marker {
 
-  CLLocationCoordinate2D coordinate = marker.position;
-  CGPoint position = [self.realMarker.map.projection pointForCoordinate:coordinate];
-
-  return @{
-         @"id": marker.identifier ?: @"unknown",
-         @"position": @{
-             @"x": @(position.x),
-             @"y": @(position.y),
-             },
-         @"coordinate": @{
-             @"latitude": @(coordinate.latitude),
-             @"longitude": @(coordinate.longitude),
-             }
-         };
-}
 
 - (void)iconViewInsertSubview:(UIView*)subview atIndex:(NSInteger)atIndex {
   if (!_realMarker.iconView) {
@@ -212,17 +195,17 @@ CGRect unionRect(CGRect a, CGRect b) {
 
 - (void)didBeginDraggingMarker:(AIRGMSMarker *)marker {
   if (!self.onDragStart) return;
-  self.onDragStart([self eventFromMarker:marker]);
+  self.onDragStart([self makeEventData]);
 }
 
 - (void)didEndDraggingMarker:(AIRGMSMarker *)marker {
   if (!self.onDragEnd) return;
-  self.onDragEnd([self eventFromMarker:marker]);
+  self.onDragEnd([self makeEventData]);
 }
 
 - (void)didDragMarker:(AIRGMSMarker *)marker {
   if (!self.onDrag) return;
-  self.onDrag([self eventFromMarker:marker]);
+  self.onDrag([self makeEventData]);
 }
 
 - (void)setCoordinate:(CLLocationCoordinate2D)coordinate {
@@ -255,6 +238,22 @@ CGRect unionRect(CGRect a, CGRect b) {
 
 - (RCTBubblingEventBlock)onPress {
   return _realMarker.onPress;
+}
+
+- (void)setOnSelect:(RCTDirectEventBlock)onSelect {
+  _realMarker.onSelect = onSelect;
+}
+
+- (RCTDirectEventBlock)onSelect {
+  return _realMarker.onSelect;
+}
+
+- (void)setOnDeselect:(RCTDirectEventBlock)onDeselect {
+  _realMarker.onDeselect = onDeselect;
+}
+
+- (RCTDirectEventBlock)onDeselect {
+  return _realMarker.onDeselect;
 }
 
 - (void)setOpacity:(double)opacity
@@ -378,6 +377,29 @@ CGRect unionRect(CGRect a, CGRect b) {
 
 - (BOOL)tracksInfoWindowChanges {
   return _realMarker.tracksInfoWindowChanges;
+}
+
+
+- (id)makeEventData:(NSString *)action {
+    CLLocationCoordinate2D coordinate = self.realMarker.position;
+    CGPoint position = [self.realMarker.map.projection pointForCoordinate:coordinate];
+
+    return @{
+            @"id": self.identifier ?: @"unknown",
+            @"position": @{
+                @"x": @(position.x),
+                @"y": @(position.y),
+                },
+            @"coordinate": @{
+                @"latitude": @(coordinate.latitude),
+                @"longitude": @(coordinate.longitude),
+                },
+            @"action": action,
+            };
+}
+
+- (id)makeEventData {
+    return [self makeEventData:@"unknown"];
 }
 
 @end

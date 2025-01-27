@@ -29,8 +29,14 @@
   _coordinates = coordinates;
 
   GMSMutablePath *path = [GMSMutablePath path];
-  for(int i = 0; i < coordinates.count; i++)
+
+  if (!coordinates || coordinates.count == 0) 
   {
+    [path removeAllCoordinates];
+    return;
+  }
+
+  for (int i = 0; i < coordinates.count; i++) {
     [path addCoordinate:coordinates[i].coordinate];
   }
 
