@@ -13,9 +13,8 @@ import android.view.View;
 import androidx.annotation.Nullable;
 import com.facebook.react.bridge.ReadableArray;
 import com.facebook.react.bridge.ReadableMap;
-import com.facebook.react.uimanager.ViewManagerWithGeneratedInterface;
 
-public interface RNMapsMapViewManagerInterface<T extends View> extends ViewManagerWithGeneratedInterface {
+public interface RNMapsMapViewManagerInterface<T extends View> {
   void setCacheEnabled(T view, boolean value);
   void setCamera(T view, @Nullable ReadableMap value);
   void setCompassOffset(T view, @Nullable ReadableMap value);
