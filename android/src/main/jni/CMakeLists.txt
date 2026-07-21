@@ -25,4 +25,7 @@ target_link_libraries(
   reactnative
 )
 
-target_compile_reactnative_options(react_codegen_RNMapsSpecs PRIVATE)
+# target_compile_reactnative_options is not available in RN < 0.79; omit for RN 0.77 compatibility
+if(COMMAND target_compile_reactnative_options)
+  target_compile_reactnative_options(react_codegen_RNMapsSpecs PRIVATE)
+endif()
