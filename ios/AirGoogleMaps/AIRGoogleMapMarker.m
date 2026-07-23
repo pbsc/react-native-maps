@@ -146,6 +146,18 @@ CGRect unionRect(CGRect a, CGRect b) {
     if (_zIndex){
         [_realMarker setZIndex:_zIndex];
     }
+    // Fabric (RN new architecture) calls updateProps — and therefore setImageSrc:/
+    // setIconSrc: — before the marker is added to the map, so _realMarker does not
+    // exist yet and the icon assignment is a silent no-op. Replay the stored value
+    // here now that _realMarker is live. pinColor is applied above first so that a
+    // custom image always wins over it.
+    // TODO: remove this block when upgrading to bridgeless RN and the old-arch
+    // AIRGoogleMapMarker prop-setter pathway is retired.
+    if (_imageSrc) {
+        [self setImageSrc:_imageSrc];
+    } else if (_iconSrc) {
+        [self setIconSrc:_iconSrc];
+    }
     [_realMarker setMap:map];
 }
 
@@ -345,6 +357,8 @@ CGRect unionRect(CGRect a, CGRect b) {
     _opacity = opacity;
 }
 
+// Sets _realMarker.icon directly. Falls back to a solid blue pin when image is
+// nil or invalid so that a rendering failure is visually obvious during development.
 - (void)setIcon:(UIImage*)image {
     CGImageRef cgref = [image CGImage];
     CIImage *cim = [image CIImage];
@@ -355,11 +369,26 @@ CGRect unionRect(CGRect a, CGRect b) {
     }
 }
 
+// Handles PBSC's `useCfMarkerJSON:` and inline `<svg` URI schemes via GlobalVars.
+// Passing nil clears the icon (e.g. when the `image` prop is removed).
+// _imageSrc is stored so didInsertInMap: can replay the assignment after _realMarker
+// is created — necessary because Fabric's updateProps fires before the marker is
+// added to the map. When RN removes the Paper/Fabric split (bridgeless-only), the
+// didInsertInMap: replay becomes the only call site and this store can be removed.
 - (void)setImageSrc:(NSString *)imageSrc {
+    _imageSrc = imageSrc;
+    if (!imageSrc) {
+        _realMarker.icon = nil;
+        return;
+    }
     UIImage *image = [[GlobalVars sharedInstance] getSharedUIImage:imageSrc];
     [self setIcon:image];
 }
 
+// Loads a remote/bundled image via RN's ImageLoader and sets it as the marker icon.
+// [RCTBridge currentBridge] is a pre-bridgeless compatibility shim. When this project
+// migrates to the bridgeless RN runtime (RN 0.80+), replace with an image-loader
+// reference injected at construction time (e.g. via RCTImageLoader from TurboModules).
 - (void)setIconSrc:(NSString *)iconSrc
 {
     _iconSrc = iconSrc;
@@ -370,9 +399,10 @@ CGRect unionRect(CGRect a, CGRect b) {
     }
 
     if (!_realMarker.icon) {
-        // prevent glitch with marker (cf. https://github.com/react-native-maps/react-native-maps/issues/3657)
-        UIImage *emptyImage = [[UIImage alloc] init];
-        _realMarker.icon = emptyImage;
+        // Immediately set an empty image to avoid a flash of the default red pin
+        // while the async load is in-flight.
+        // See: https://github.com/react-native-maps/react-native-maps/issues/3657
+        _realMarker.icon = [[UIImage alloc] init];
     }
 
     _reloadImageCancellationBlock =
@@ -385,8 +415,7 @@ CGRect unionRect(CGRect a, CGRect b) {
                                                    partialLoadBlock:nil
                                                     completionBlock:^(NSError *error, UIImage *image) {
         if (error) {
-            // TODO(lmr): do something with the error?
-            NSLog(@"%@", error);
+            NSLog(@"[AIRGoogleMapMarker] iconSrc load error: %@", error);
         }
         dispatch_async(dispatch_get_main_queue(), ^{
             self->_realMarker.icon = image;

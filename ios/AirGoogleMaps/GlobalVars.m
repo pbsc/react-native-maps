@@ -273,31 +273,46 @@
 }
 
 
+// Returns a UIImage for the given imageSrc string, caching by key.
+// Supported URI schemes:
+//   http:// / https://   — synchronous download (WARNING: blocks caller's thread; only use off main queue)
+//   <svg …               — inline SVG string rendered via SVGKit
+//   useCfMarkerJSON:{…}  — PBSC station-marker descriptor; rendered via getCFMarker:
+//
+// Cache note: entries are never evicted. On a map with many distinct marker states the
+// dictionary can grow large. If memory pressure becomes a problem, add an NSCache with a
+// cost limit and wire it to UIApplicationDidReceiveMemoryWarningNotification.
 - (UIImage *)getSharedUIImage:(NSString *)imageSrc {
+  if (!imageSrc) return nil;
 
-  UIImage* cachedImage = dict[imageSrc];
+  UIImage *cachedImage = dict[imageSrc];
 
   CGImageRef cgref = [cachedImage CGImage];
   CIImage *cim = [cachedImage CIImage];
 
   if (cim == nil && cgref == NULL) {
-    UIImage *newImage;
-    if ([imageSrc hasPrefix:@"http://"] || [imageSrc hasPrefix:@"https://"]){
+    UIImage *newImage = nil;
+
+    if ([imageSrc hasPrefix:@"http://"] || [imageSrc hasPrefix:@"https://"]) {
+      // Synchronous network fetch — caller must NOT be on the main thread.
+      // This path is not exercised by useCfMarkerJSON: markers.
       NSURL *url = [NSURL URLWithString:imageSrc];
       NSData *data = [NSData dataWithContentsOfURL:url];
       newImage = [UIImage imageWithData:data scale:[UIScreen mainScreen].scale];
-    } else if([imageSrc hasPrefix:@"<svg"]) {
+
+    } else if ([imageSrc hasPrefix:@"<svg"]) {
       SVGKSource *source = [SVGKSourceString sourceFromContentsOfString:imageSrc];
       SVGKImage *img = [SVGKImage imageWithSource:source];
       newImage = img.UIImage;
-    } else if([imageSrc hasPrefix:@"useCfMarker"]) {
+
+    } else if ([imageSrc hasPrefix:@"useCfMarker"]) {
       NSString *jsonString = [imageSrc componentsSeparatedByString:@"JSON:"][1];
-      NSData* jsonData = [jsonString dataUsingEncoding:NSUTF8StringEncoding];
+      NSData *jsonData = [jsonString dataUsingEncoding:NSUTF8StringEncoding];
       NSError *error;
       id jsonObject = [NSJSONSerialization JSONObjectWithData:jsonData options:0 error:&error];
       if (error) {
-        NSLog(@"Error parsing JSON: %@", error);
-      } else{
+        NSLog(@"[GlobalVars] useCfMarkerJSON parse error: %@", error);
+      } else {
         NSDictionary *jsonDictionary = (NSDictionary *)jsonObject;
         NSString *topOutline = jsonDictionary[@"topOutline"];
         NSString *bottomOutline = jsonDictionary[@"bottomOutline"];
@@ -308,32 +323,34 @@
         NSDictionary *promoted = (NSDictionary *)jsonDictionary[@"promoted"];
         NSString *promotedColor = promoted[@"color"];
         BOOL isPromoted = [promoted[@"isPromoted"] boolValue];
-        NSString *trafficValue = jsonDictionary[@"traffic"];
-        NSString *zoomLevelValue = jsonDictionary[@"zoomLevel"];
+        float traffic = [jsonDictionary[@"traffic"] floatValue];
+        NSInteger zoomLevel = [jsonDictionary[@"zoomLevel"] integerValue];
         BOOL hasValetService = [jsonDictionary[@"hasValetService"] boolValue];
 
         NSArray *allKeys = [jsonDictionary allKeys];
-        NSDictionary *planned = ([allKeys containsObject:@"planned"]) ? (NSDictionary *)jsonDictionary[@"planned"] : nil;
-        NSDictionary *maintenance = ([allKeys containsObject:@"maintenance"]) ? (NSDictionary *)jsonDictionary[@"maintenance"] : nil;
-        float traffic = [trafficValue floatValue];
-        NSInteger zoomLevel = [zoomLevelValue integerValue];
+        NSDictionary *planned = [allKeys containsObject:@"planned"] ? jsonDictionary[@"planned"] : nil;
+        NSDictionary *maintenance = [allKeys containsObject:@"maintenance"] ? jsonDictionary[@"maintenance"] : nil;
 
-        newImage = [self getCFMarker:hasValetService 
-                        topOutline:topOutline 
-                        bottomOutline:bottomOutline 
-                        topInner:topInner 
-                        bottomInner:bottomInner 
-                        level:level 
-                        promotedColor:(isPromoted ? promotedColor : nil) 
-                        depotType:depotType 
-                        traffic:traffic 
-                        zoomLevel:zoomLevel
-                        planned: planned
-                        maintenance: maintenance
-                    ];
+        newImage = [self getCFMarker:hasValetService
+                          topOutline:topOutline
+                        bottomOutline:bottomOutline
+                            topInner:topInner
+                         bottomInner:bottomInner
+                               level:level
+                       promotedColor:(isPromoted ? promotedColor : nil)
+                           depotType:depotType
+                             traffic:traffic
+                           zoomLevel:zoomLevel
+                             planned:planned
+                         maintenance:maintenance];
       }
     }
-    dict[imageSrc] = newImage;
+
+    // Only cache successfully rendered images. Storing nil in NSMutableDictionary
+    // via subscript throws NSInvalidArgumentException.
+    if (newImage) {
+      dict[imageSrc] = newImage;
+    }
     return newImage;
   } else {
     return cachedImage;
