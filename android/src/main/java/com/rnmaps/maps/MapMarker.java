@@ -134,66 +134,83 @@ public class MapMarker extends MapFeature {
 
     private final DraweeHolder<?> logoHolder;
     private ImageManager.OnImageLoadedListener imageLoadedListener;
-    private DataSource<CloseableReference<CloseableImage>> dataSource;
-    private final ControllerListener<ImageInfo> mLogoControllerListener =
-            new BaseControllerListener<ImageInfo>() {
-                @Override
-                public void onSubmit(String id, Object callerContext) {
-                    loadingImage = true;
+
+    // Each setImage() call gets its own listener bound to its own requestUri/requestDataSource
+    // (captured as final locals) instead of a single field-level listener reading shared
+    // instance fields. Fabric can rebind this MapMarker view instance to a different logical
+    // marker (a new imageUri) while a previous decode is still in flight; the requestUri
+    // equality check below discards a stale result instead of letting it stomp the icon that
+    // now belongs to a different marker. This mirrors Fresco's own internal
+    // AbstractDraweeController#isExpectedDataSource guard against the same class of race.
+    private ControllerListener<ImageInfo> createLogoControllerListener(
+            final String requestUri,
+            final DataSource<CloseableReference<CloseableImage>> requestDataSource) {
+        return new BaseControllerListener<ImageInfo>() {
+            @Override
+            public void onSubmit(String id, Object callerContext) {
+                loadingImage = true;
+            }
+
+            @Override
+            public void onFinalImageSet(
+                    String id,
+                    @Nullable final ImageInfo imageInfo,
+                    @Nullable Animatable animatable) {
+                Bitmap decodedBitmap = null;
+                BitmapDescriptor decodedBitmapDescriptor = null;
+                CloseableReference<CloseableImage> imageReference = null;
+                try {
+                    imageReference = requestDataSource.getResult();
+                    if (imageReference != null) {
+                        CloseableImage image = imageReference.get();
+                        if (image instanceof CloseableStaticBitmap) {
+                            CloseableStaticBitmap closeableStaticBitmap = (CloseableStaticBitmap) image;
+                            Bitmap bitmap = closeableStaticBitmap.getUnderlyingBitmap();
+                            if (bitmap != null) {
+                                decodedBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true);
+                                decodedBitmapDescriptor = BitmapDescriptorFactory.fromBitmap(decodedBitmap);
+                            }
+                        }
+                        if (image instanceof CloseableSvgImage) {
+                            SVG svgImage = ((CloseableSvgImage) image).getSvg();
+                            Bitmap newBM = Bitmap.createBitmap((int) Math.ceil(svgImage.getDocumentWidth()),
+                                    (int) Math.ceil(svgImage.getDocumentHeight()),
+                                    Bitmap.Config.ARGB_8888);
+                            Canvas bmcanvas = new Canvas(newBM);
+                            svgImage.renderToCanvas(bmcanvas);
+                            decodedBitmap = newBM.copy(Bitmap.Config.ARGB_8888, true);
+                            decodedBitmapDescriptor = BitmapDescriptorFactory.fromBitmap(decodedBitmap);
+                        }
+                    }
+                } finally {
+                    requestDataSource.close();
+                    if (imageReference != null) {
+                        CloseableReference.closeSafely(imageReference);
+                    }
                 }
 
-                @Override
-                public void onFinalImageSet(
-                        String id,
-                        @Nullable final ImageInfo imageInfo,
-                        @Nullable Animatable animatable) {
-                    CloseableReference<CloseableImage> imageReference = null;
-                    try {
-                        imageReference = dataSource.getResult();
-                        if (imageReference != null) {
-                            CloseableImage image = imageReference.get();
-                            if (image instanceof CloseableStaticBitmap) {
-                                CloseableStaticBitmap closeableStaticBitmap = (CloseableStaticBitmap) image;
-                                Bitmap bitmap = closeableStaticBitmap.getUnderlyingBitmap();
-                                if (bitmap != null) {
-                                    bitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true);
-                                    iconBitmap = bitmap;
-                                    iconBitmapDescriptor = BitmapDescriptorFactory.fromBitmap(bitmap);
-                                }
-                            }
-                            if (image instanceof CloseableSvgImage) {
-                                SVG svgImage = ((CloseableSvgImage) image).getSvg();
-                                Bitmap newBM = Bitmap.createBitmap((int) Math.ceil(svgImage.getDocumentWidth()),
-                                        (int) Math.ceil(svgImage.getDocumentHeight()),
-                                        Bitmap.Config.ARGB_8888);
-                                Canvas bmcanvas = new Canvas(newBM);
-                                svgImage.renderToCanvas(bmcanvas);
-                                if (newBM != null) {
-                                    newBM = newBM.copy(Bitmap.Config.ARGB_8888, true);
-                                    iconBitmap = newBM;
-                                    iconBitmapDescriptor = BitmapDescriptorFactory.fromBitmap(newBM);
-                                }
-                            }
-                        }
-                    } finally {
-                        dataSource.close();
-                        if (imageReference != null) {
-                            CloseableReference.closeSafely(imageReference);
-                        }
-                    }
-                    if (MapMarker.this.markerManager != null && MapMarker.this.imageUri != null) {
-                        MapMarker.this.markerManager.getSharedIcon(MapMarker.this.imageUri)
-                                .updateIcon(iconBitmapDescriptor, iconBitmap);
-                    }
-                    update(true);
+                if (!requestUri.equals(MapMarker.this.imageUri)) {
+                    // Stale: this view has already been rebound to a different imageUri.
                     loadingImage = false;
-                    if (imageLoadedListener != null) {
-                        imageLoadedListener.onImageLoaded(null, null, false);
-                        // fire and forget
-                        imageLoadedListener = null;
-                    }
+                    return;
                 }
-            };
+
+                iconBitmap = decodedBitmap;
+                iconBitmapDescriptor = decodedBitmapDescriptor;
+                if (MapMarker.this.markerManager != null) {
+                    MapMarker.this.markerManager.getSharedIcon(requestUri)
+                            .updateIcon(iconBitmapDescriptor, iconBitmap);
+                }
+                update(true);
+                loadingImage = false;
+                if (imageLoadedListener != null) {
+                    imageLoadedListener.onImageLoaded(null, null, false);
+                    // fire and forget
+                    imageLoadedListener = null;
+                }
+            }
+        };
+    }
 
     public MapMarker(Context context, MapMarkerManager markerManager) {
         super(context);
@@ -256,6 +273,19 @@ public class MapMarker extends MapFeature {
             this.removeFromMap(collection);
         }
         markerCollectionRef = null;
+
+        if (this.markerManager != null && this.imageUri != null) {
+            this.markerManager.getSharedIcon(this.imageUri).removeMarker(this);
+            this.markerManager.removeSharedIconIfEmpty(this.imageUri);
+        }
+        // Fabric can recycle this view instance for reuse by an unrelated marker. Clearing
+        // imageUri means any decode still in flight for this (now-destroyed) instance also
+        // fails the requestUri equality check in createLogoControllerListener().
+        this.imageUri = null;
+        this.iconBitmap = null;
+        this.iconBitmapDescriptor = null;
+        this.hasCustomMarkerView = false;
+        this.loadingImage = false;
     }
     public String getIdentifier() {
         return this.identifier;
@@ -483,11 +513,12 @@ public class MapMarker extends MapFeature {
                         .build();
 
                 ImagePipeline imagePipeline = Fresco.getImagePipeline();
-                dataSource = imagePipeline.fetchDecodedImage(imageRequest, this);
+                DataSource<CloseableReference<CloseableImage>> requestDataSource =
+                        imagePipeline.fetchDecodedImage(imageRequest, this);
                 DraweeController controller = Fresco.newDraweeControllerBuilder()
                         .setImageRequest(imageRequest)
                         .setCustomDrawableFactory(new SvgDrawableFactory())
-                        .setControllerListener(mLogoControllerListener)
+                        .setControllerListener(createLogoControllerListener(uri, requestDataSource))
                         .setOldController(logoHolder.getController())
                         .build();
                 logoHolder.setController(controller);
@@ -501,10 +532,11 @@ public class MapMarker extends MapFeature {
                     .build();
 
             ImagePipeline imagePipeline = Fresco.getImagePipeline();
-            dataSource = imagePipeline.fetchDecodedImage(imageRequest, this);
+            DataSource<CloseableReference<CloseableImage>> requestDataSource =
+                    imagePipeline.fetchDecodedImage(imageRequest, this);
             DraweeController controller = Fresco.newDraweeControllerBuilder()
                     .setImageRequest(imageRequest)
-                    .setControllerListener(mLogoControllerListener)
+                    .setControllerListener(createLogoControllerListener(uri, requestDataSource))
                     .setOldController(logoHolder.getController())
                     .build();
             logoHolder.setController(controller);

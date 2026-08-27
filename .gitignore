@@ -92,3 +92,7 @@ Secrets.xcconfig
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+# ios
+Gemfile.lock
+example/Gemfile.lock

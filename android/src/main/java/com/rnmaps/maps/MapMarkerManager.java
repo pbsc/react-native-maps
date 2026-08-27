@@ -96,7 +96,7 @@ public class MapMarkerManager extends ViewGroupManager<MapMarker> {
         public synchronized void updateIcon(BitmapDescriptor bitmapDescriptor, Bitmap bitmap) {
 
             this.iconBitmapDescriptor = bitmapDescriptor;
-            this.bitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true);
+            this.bitmap = bitmap != null ? bitmap.copy(Bitmap.Config.ARGB_8888, true) : null;
 
             if (this.markers.isEmpty()) {
                 return;
