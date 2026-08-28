@@ -37,7 +37,7 @@ class DisplayLatLng extends React.Component<any, any> {
   }
 
   jumpRandom() {
-    this.setState({region: this.randomRegion()});
+    this.map.setRegion(this.randomRegion());
   }
 
   animateRandom() {
@@ -62,11 +62,14 @@ class DisplayLatLng extends React.Component<any, any> {
 
   randomCoordinate() {
     const region = this.state.region;
+    const scaleFactor = Math.random() * 10;
     return {
       latitude:
-        region.latitude + (Math.random() - 0.5) * (region.latitudeDelta / 2),
+        region.latitude +
+        (Math.random() - 0.5) * (region.latitudeDelta * scaleFactor),
       longitude:
-        region.longitude + (Math.random() - 0.5) * (region.longitudeDelta / 2),
+        region.longitude +
+        (Math.random() - 0.5) * (region.longitudeDelta * scaleFactor),
     };
   }
 
@@ -82,6 +85,7 @@ class DisplayLatLng extends React.Component<any, any> {
       <View style={styles.container}>
         <MapView
           provider={this.props.provider}
+          rotateEnabled={false}
           ref={ref => {
             this.map = ref;
           }}
@@ -112,6 +116,8 @@ class DisplayLatLng extends React.Component<any, any> {
             style={[styles.bubble, styles.button]}>
             <Text style={styles.buttonText}>Animate (Coordinate)</Text>
           </TouchableOpacity>
+        </View>
+        <View style={styles.buttonContainer}>
           <TouchableOpacity
             onPress={() => this.animateToRandomBearing()}
             style={[styles.bubble, styles.button]}>
@@ -156,7 +162,7 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     flexDirection: 'row',
-    marginVertical: 20,
+    marginVertical: 8,
     backgroundColor: 'transparent',
   },
   buttonText: {

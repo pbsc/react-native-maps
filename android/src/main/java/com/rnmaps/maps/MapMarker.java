@@ -5,25 +5,25 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.Rect;
 import android.graphics.drawable.Animatable;
 import android.graphics.drawable.Drawable;
-import android.graphics.drawable.PictureDrawable;
 import android.net.Uri;
-import android.util.DisplayMetrics;
-import android.util.Log;
 import android.view.View;
-import android.view.WindowManager;
 import android.widget.LinearLayout;
 import android.animation.ObjectAnimator;
 import android.util.Property;
 import android.animation.TypeEvaluator;
 
+import android.os.Handler;
+import android.os.Looper;
+
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.facebook.common.references.CloseableReference;
 import com.facebook.datasource.DataSource;
 import com.facebook.drawee.backends.pipeline.Fresco;
+import com.facebook.drawee.controller.AbstractDraweeController;
 import com.facebook.drawee.controller.BaseControllerListener;
 import com.facebook.drawee.controller.ControllerListener;
 import com.facebook.drawee.drawable.ScalingUtils;
@@ -31,185 +31,532 @@ import com.facebook.drawee.generic.GenericDraweeHierarchy;
 import com.facebook.drawee.generic.GenericDraweeHierarchyBuilder;
 import com.facebook.drawee.interfaces.DraweeController;
 import com.facebook.drawee.view.DraweeHolder;
-import com.facebook.imagepipeline.common.ImageDecodeOptions;
+import com.facebook.drawee.view.DraweeView;
+import com.facebook.fresco.ui.common.ControllerListener2;
 import com.facebook.imagepipeline.core.ImagePipeline;
-import com.facebook.imagepipeline.decoder.ImageDecoder;
-import com.facebook.imagepipeline.drawable.DrawableFactory;
 import com.facebook.imagepipeline.image.CloseableImage;
 import com.facebook.imagepipeline.image.CloseableStaticBitmap;
-import com.facebook.imagepipeline.image.EncodedImage;
 import com.facebook.imagepipeline.image.ImageInfo;
-import com.facebook.imagepipeline.image.QualityInfo;
 import com.facebook.imagepipeline.request.ImageRequest;
 import com.facebook.imagepipeline.request.ImageRequestBuilder;
+import com.facebook.react.bridge.ReactContext;
 import com.facebook.react.bridge.ReadableMap;
+import com.facebook.react.bridge.WritableMap;
+import com.facebook.react.common.MapBuilder;
+import com.facebook.react.uimanager.UIManagerHelper;
+import com.facebook.react.uimanager.events.Event;
+import com.facebook.react.uimanager.events.EventDispatcher;
+import com.google.android.gms.common.images.ImageManager;
 import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.maps.android.collections.MarkerManager;
+import com.rnmaps.fabric.event.OnDeselectEvent;
+import com.rnmaps.fabric.event.OnDragEndEvent;
+import com.rnmaps.fabric.event.OnDragEvent;
+import com.rnmaps.fabric.event.OnDragStartEvent;
+import com.rnmaps.fabric.event.OnPressEvent;
+import com.rnmaps.fabric.event.OnSelectEvent;
+
+import java.lang.ref.SoftReference;
+import java.lang.reflect.Method;
+import java.util.Map;
+import java.util.HashMap;
+
+import android.graphics.Rect;
+import android.graphics.drawable.PictureDrawable;
+import android.util.DisplayMetrics;
+import android.util.Log;
+import android.view.WindowManager;
+
+import com.facebook.imagepipeline.common.ImageDecodeOptions;
+import com.facebook.imagepipeline.decoder.ImageDecoder;
+import com.facebook.imagepipeline.drawable.DrawableFactory;
+import com.facebook.imagepipeline.image.EncodedImage;
+import com.facebook.imagepipeline.image.QualityInfo;
+import com.facebook.imagepipeline.image.ImmutableQualityInfo;
+import com.facebook.imagepipeline.image.ImageInfoImpl;
+
 import com.caverock.androidsvg.SVG;
 import com.caverock.androidsvg.SVGParseException;
 import org.json.JSONException;
 import org.json.JSONObject;
-import com.google.maps.android.collections.MarkerManager;
-import com.facebook.imagepipeline.image.ImmutableQualityInfo;
-import com.facebook.imagepipeline.image.ImageInfoImpl;
-import androidx.annotation.NonNull;
-import java.util.HashMap;
-import java.util.Map;
 
 public class MapMarker extends MapFeature {
 
-  private MarkerOptions markerOptions;
-  private Marker marker;
-  private int width;
-  private int height;
-  private String identifier;
+    private MarkerOptions markerOptions;
+    private Marker marker;
+    private int width;
+    private int height;
+    private String identifier;
 
-  private LatLng position;
-  private String title;
-  private String snippet;
+    private LatLng position;
+    private String title;
+    private String snippet;
 
-  private boolean anchorIsSet;
-  private float anchorX;
-  private float anchorY;
+    private boolean anchorIsSet;
+    private float anchorX;
+    private float anchorY;
 
-  private MapCallout calloutView;
-  private View wrappedCalloutView;
-  private final Context context;
+    private MapCallout calloutView;
+    private View wrappedCalloutView;
+    private final Context context;
 
-  private float markerHue = 0.0f; // should be between 0 and 360
-  private BitmapDescriptor iconBitmapDescriptor;
-  private Bitmap iconBitmap;
+    private float markerHue = 0.0f; // should be between 0 and 360
+    private BitmapDescriptor iconBitmapDescriptor;
+    private Bitmap iconBitmap;
 
-  private float rotation = 0.0f;
-  private boolean flat = false;
-  private boolean draggable = false;
-  private int zIndex = 0;
-  private float opacity = 1.0f;
+    private float rotation = 0.0f;
+    private boolean flat = false;
+    private boolean draggable = false;
+    private int zIndex = 0;
+    private float opacity = 1.0f;
 
-  private float calloutAnchorX;
-  private float calloutAnchorY;
-  private boolean calloutAnchorIsSet;
+    private float calloutAnchorX;
+    private float calloutAnchorY;
+    private boolean calloutAnchorIsSet;
 
-  private boolean tracksViewChanges = true;
-  private boolean tracksViewChangesActive = false;
+    private int updated = 0;
 
-  private boolean hasCustomMarkerView = false;
-  private final MapMarkerManager markerManager;
-  private String imageUri;
+    private boolean tracksViewChanges = true;
+    private boolean tracksViewChangesActive = false;
 
-  private final DraweeHolder<?> logoHolder;
-  private DataSource<CloseableReference<CloseableImage>> dataSource;
-  private final ControllerListener<ImageInfo> mLogoControllerListener =
-          new BaseControllerListener<ImageInfo>() {
+    private boolean hasCustomMarkerView = false;
+    private final MapMarkerManager markerManager;
+    private String imageUri;
+    private boolean loadingImage;
+
+    private SoftReference<MarkerManager.Collection> markerCollectionRef;
+
+
+
+    private final DraweeHolder<?> logoHolder;
+    private ImageManager.OnImageLoadedListener imageLoadedListener;
+
+    // Each setImage() call gets its own listener bound to its own requestUri/requestDataSource
+    // (captured as final locals) instead of a single field-level listener reading shared
+    // instance fields. Fabric can rebind this MapMarker view instance to a different logical
+    // marker (a new imageUri) while a previous decode is still in flight; the requestUri
+    // equality check below discards a stale result instead of letting it stomp the icon that
+    // now belongs to a different marker. This mirrors Fresco's own internal
+    // AbstractDraweeController#isExpectedDataSource guard against the same class of race.
+    private ControllerListener<ImageInfo> createLogoControllerListener(
+            final String requestUri,
+            final DataSource<CloseableReference<CloseableImage>> requestDataSource) {
+        return new BaseControllerListener<ImageInfo>() {
+            @Override
+            public void onSubmit(String id, Object callerContext) {
+                loadingImage = true;
+            }
+
             @Override
             public void onFinalImageSet(
                     String id,
                     @Nullable final ImageInfo imageInfo,
                     @Nullable Animatable animatable) {
-              CloseableReference<CloseableImage> imageReference = null;
-              try {
-                imageReference = dataSource.getResult();
-                if (imageReference != null) {
-                  CloseableImage image = imageReference.get();
-                  if (image != null && image instanceof CloseableStaticBitmap) {
-                    CloseableStaticBitmap closeableStaticBitmap = (CloseableStaticBitmap) image;
-                    Bitmap bitmap = closeableStaticBitmap.getUnderlyingBitmap();
-                    if (bitmap != null) {
-                      bitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true);
-                      iconBitmap = bitmap;
-                      iconBitmapDescriptor = BitmapDescriptorFactory.fromBitmap(bitmap);
+                Bitmap decodedBitmap = null;
+                BitmapDescriptor decodedBitmapDescriptor = null;
+                CloseableReference<CloseableImage> imageReference = null;
+                try {
+                    imageReference = requestDataSource.getResult();
+                    if (imageReference != null) {
+                        CloseableImage image = imageReference.get();
+                        if (image instanceof CloseableStaticBitmap) {
+                            CloseableStaticBitmap closeableStaticBitmap = (CloseableStaticBitmap) image;
+                            Bitmap bitmap = closeableStaticBitmap.getUnderlyingBitmap();
+                            if (bitmap != null) {
+                                decodedBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true);
+                                decodedBitmapDescriptor = BitmapDescriptorFactory.fromBitmap(decodedBitmap);
+                            }
+                        }
+                        if (image instanceof CloseableSvgImage) {
+                            SVG svgImage = ((CloseableSvgImage) image).getSvg();
+                            Bitmap newBM = Bitmap.createBitmap((int) Math.ceil(svgImage.getDocumentWidth()),
+                                    (int) Math.ceil(svgImage.getDocumentHeight()),
+                                    Bitmap.Config.ARGB_8888);
+                            Canvas bmcanvas = new Canvas(newBM);
+                            svgImage.renderToCanvas(bmcanvas);
+                            decodedBitmap = newBM.copy(Bitmap.Config.ARGB_8888, true);
+                            decodedBitmapDescriptor = BitmapDescriptorFactory.fromBitmap(decodedBitmap);
+                        }
                     }
-                  }
-                  if(image != null && image instanceof CloseableSvgImage) {
-                    SVG svgImage = ((CloseableSvgImage) image).getSvg();
-                    Bitmap  newBM = Bitmap.createBitmap((int) Math.ceil(svgImage.getDocumentWidth()),
-                            (int) Math.ceil(svgImage.getDocumentHeight()),
-                            Bitmap.Config.ARGB_8888);
-                    Canvas  bmcanvas = new Canvas(newBM);
-                    svgImage.renderToCanvas(bmcanvas);
-                    if (newBM != null) {
-                      newBM = newBM.copy(Bitmap.Config.ARGB_8888, true);
-                      iconBitmap = newBM;
-                      iconBitmapDescriptor = BitmapDescriptorFactory.fromBitmap(newBM);
+                } finally {
+                    requestDataSource.close();
+                    if (imageReference != null) {
+                        CloseableReference.closeSafely(imageReference);
                     }
-                  }
                 }
-              } finally {
-                dataSource.close();
-                if (imageReference != null) {
-                  CloseableReference.closeSafely(imageReference);
+
+                if (!requestUri.equals(MapMarker.this.imageUri)) {
+                    // Stale: this view has already been rebound to a different imageUri.
+                    loadingImage = false;
+                    return;
                 }
-              }
-              if (MapMarker.this.markerManager != null && MapMarker.this.imageUri != null) {
-                MapMarker.this.markerManager.getSharedIcon(MapMarker.this.imageUri)
-                    .updateIcon(iconBitmapDescriptor, iconBitmap);
-              }
-              update(true);
+
+                iconBitmap = decodedBitmap;
+                iconBitmapDescriptor = decodedBitmapDescriptor;
+                if (MapMarker.this.markerManager != null) {
+                    MapMarker.this.markerManager.getSharedIcon(requestUri)
+                            .updateIcon(iconBitmapDescriptor, iconBitmap);
+                }
+                update(true);
+                loadingImage = false;
+                if (imageLoadedListener != null) {
+                    imageLoadedListener.onImageLoaded(null, null, false);
+                    // fire and forget
+                    imageLoadedListener = null;
+                }
             }
-          };
-
-  public MapMarker(Context context, MapMarkerManager markerManager) {
-    super(context);
-    this.context = context;
-    this.markerManager = markerManager;
-    logoHolder = DraweeHolder.create(createDraweeHierarchy(), context);
-    logoHolder.onAttach();
-  }
-
-  public MapMarker(Context context, MarkerOptions options, MapMarkerManager markerManager) {
-    super(context);
-    this.context = context;
-    this.markerManager = markerManager;
-    logoHolder = DraweeHolder.create(createDraweeHierarchy(), context);
-    logoHolder.onAttach();
-
-    position = options.getPosition();
-    setAnchor(options.getAnchorU(), options.getAnchorV());
-    setCalloutAnchor(options.getInfoWindowAnchorU(), options.getInfoWindowAnchorV());
-    setTitle(options.getTitle());
-    setSnippet(options.getSnippet());
-    setRotation(options.getRotation());
-    setFlat(options.isFlat());
-    setDraggable(options.isDraggable());
-    setZIndex(Math.round(options.getZIndex()));
-    setAlpha(options.getAlpha());
-    iconBitmapDescriptor = options.getIcon();
-  }
-
-  private GenericDraweeHierarchy createDraweeHierarchy() {
-    return new GenericDraweeHierarchyBuilder(getResources())
-            .setActualImageScaleType(ScalingUtils.ScaleType.FIT_CENTER)
-            .setFadeDuration(0)
-            .build();
-  }
-
-  public void setCoordinate(ReadableMap coordinate) {
-    position = new LatLng(coordinate.getDouble("latitude"), coordinate.getDouble("longitude"));
-    if (marker != null) {
-      marker.setPosition(position);
+        };
     }
-    update(false);
-  }
 
-  public void setIdentifier(String identifier) {
-    this.identifier = identifier;
-    update(false);
-  }
-
-  public String getIdentifier() {
-    return this.identifier;
-  }
-
-  public void setTitle(String title) {
-    this.title = title;
-    if (marker != null) {
-      marker.setTitle(title);
+    public MapMarker(Context context, MapMarkerManager markerManager) {
+        super(context);
+        this.context = context;
+        this.markerManager = markerManager;
+        logoHolder = DraweeHolder.create(createDraweeHierarchy(), context);
+        logoHolder.onAttach();
     }
-    update(false);
-  }
+
+    public MapMarker(Context context, MarkerOptions options, MapMarkerManager markerManager) {
+        super(context);
+        this.context = context;
+        this.markerManager = markerManager;
+        logoHolder = DraweeHolder.create(createDraweeHierarchy(), context);
+        logoHolder.onAttach();
+
+        position = options.getPosition();
+        setAnchor(options.getAnchorU(), options.getAnchorV());
+        setCalloutAnchor(options.getInfoWindowAnchorU(), options.getInfoWindowAnchorV());
+        setTitle(options.getTitle());
+        setSnippet(options.getSnippet());
+        setRotation(options.getRotation());
+        setFlat(options.isFlat());
+        setDraggable(options.isDraggable());
+        setZIndex(Math.round(options.getZIndex()));
+        setOpacity(options.getAlpha());
+        iconBitmapDescriptor = options.getIcon();
+    }
+
+    private GenericDraweeHierarchy createDraweeHierarchy() {
+        return new GenericDraweeHierarchyBuilder(getResources())
+                .setActualImageScaleType(ScalingUtils.ScaleType.FIT_CENTER)
+                .setFadeDuration(0)
+                .build();
+    }
+
+    public void setCoordinate(ReadableMap coordinate) {
+        setCoordinate(new LatLng(coordinate.getDouble("latitude"), coordinate.getDouble("longitude")));
+    }
+
+    public void setCoordinate(LatLng position) {
+        this.position = position;
+        if (marker != null) {
+            marker.setPosition(position);
+        }
+        update(false);
+    }
+
+    public void setIdentifier(String identifier) {
+        this.identifier = identifier;
+        update(false);
+    }
+
+    public void doDestroy() {
+        MarkerManager.Collection collection = markerCollectionRef != null
+                ? markerCollectionRef.get()
+                : null;
+
+        if (collection != null) {
+            this.removeFromMap(collection);
+        }
+        markerCollectionRef = null;
+
+        if (this.markerManager != null && this.imageUri != null) {
+            this.markerManager.getSharedIcon(this.imageUri).removeMarker(this);
+            this.markerManager.removeSharedIconIfEmpty(this.imageUri);
+        }
+        // Fabric can recycle this view instance for reuse by an unrelated marker. Clearing
+        // imageUri means any decode still in flight for this (now-destroyed) instance also
+        // fails the requestUri equality check in createLogoControllerListener().
+        this.imageUri = null;
+        this.iconBitmap = null;
+        this.iconBitmapDescriptor = null;
+        this.hasCustomMarkerView = false;
+        this.loadingImage = false;
+    }
+    public String getIdentifier() {
+        return this.identifier;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+        if (marker != null) {
+            marker.setTitle(title);
+        }
+        update(false);
+    }
+
+    public void setSnippet(String snippet) {
+        this.snippet = snippet;
+        if (marker != null) {
+            marker.setSnippet(snippet);
+        }
+        update(false);
+    }
+
+    public void setRotation(float rotation) {
+        this.rotation = rotation;
+        if (marker != null) {
+            marker.setRotation(rotation);
+        }
+        update(false);
+    }
+
+    public void setFlat(boolean flat) {
+        this.flat = flat;
+        if (marker != null) {
+            marker.setFlat(flat);
+        }
+        update(false);
+    }
+
+    public void setDraggable(boolean draggable) {
+        this.draggable = draggable;
+        if (marker != null) {
+            marker.setDraggable(draggable);
+        }
+        update(false);
+    }
+
+    public void setZIndex(int zIndex) {
+        this.zIndex = zIndex;
+        if (marker != null) {
+            marker.setZIndex(zIndex);
+        }
+        update(false);
+    }
+
+    public void setOpacity(float opacity) {
+        this.opacity = opacity;
+        if (marker != null) {
+            marker.setAlpha(opacity);
+        }
+        update(false);
+    }
+
+    public void setMarkerHue(float markerHue) {
+        this.markerHue = markerHue;
+        update(true);
+    }
+
+    public void setAnchor(double x, double y) {
+        anchorIsSet = true;
+        anchorX = (float) x;
+        anchorY = (float) y;
+        if (marker != null) {
+            marker.setAnchor(anchorX, anchorY);
+        }
+        update(false);
+    }
+
+    public void setCalloutAnchor(double x, double y) {
+        calloutAnchorIsSet = true;
+        calloutAnchorX = (float) x;
+        calloutAnchorY = (float) y;
+        if (marker != null) {
+            marker.setInfoWindowAnchor(calloutAnchorX, calloutAnchorY);
+        }
+        update(false);
+    }
+
+    public void setTracksViewChanges(boolean tracksViewChanges) {
+        this.tracksViewChanges = tracksViewChanges;
+        updateTracksViewChanges();
+    }
+
+    private void updateTracksViewChanges() {
+        boolean shouldTrack = tracksViewChanges && hasCustomMarkerView && marker != null;
+        if (shouldTrack == tracksViewChangesActive) return;
+        tracksViewChangesActive = shouldTrack;
+
+        if (shouldTrack) {
+            ViewChangesTracker.getInstance().addMarker(this);
+        } else {
+            ViewChangesTracker.getInstance().removeMarker(this);
+
+            // Let it render one more time to avoid race conditions.
+            // i.e. Image onLoad ->
+            //      ViewChangesTracker may not get a chance to render ->
+            //      setState({ tracksViewChanges: false }) ->
+            //      image loaded but not rendered.
+            updateMarkerIcon();
+        }
+    }
+
+    public LatLng getPosition() {
+        return position;
+    }
+
+    public boolean updateCustomForTracking() {
+        if (!tracksViewChangesActive || updated == 0) {
+            tracksViewChangesActive = false;
+            return false;
+        }
+
+        updateMarkerIcon();
+        if (updated > 0) {
+            updated--;
+        }
+        return true;
+    }
+
+    public void updateMarkerIcon() {
+        if (marker == null) return;
+
+        marker.setIcon(getIcon());
+    }
+
+    public LatLng interpolate(float fraction, LatLng a, LatLng b) {
+        double lat = (b.latitude - a.latitude) * fraction + a.latitude;
+        double lng = (b.longitude - a.longitude) * fraction + a.longitude;
+        return new LatLng(lat, lng);
+    }
+
+    public void animateToCoodinate(LatLng finalPosition, Integer duration) {
+        TypeEvaluator<LatLng> typeEvaluator = new TypeEvaluator<LatLng>() {
+            @Override
+            public LatLng evaluate(float fraction, LatLng startValue, LatLng endValue) {
+                return interpolate(fraction, startValue, endValue);
+            }
+        };
+        Property<Marker, LatLng> property = Property.of(Marker.class, LatLng.class, "position");
+        ObjectAnimator animator = ObjectAnimator.ofObject(
+                marker,
+                property,
+                typeEvaluator,
+                finalPosition);
+        animator.setDuration(duration);
+        animator.start();
+    }
+
+    public void setImage(String uri) {
+
+        boolean shouldLoadImage = true;
+
+        if (this.markerManager != null) {
+            // remove marker from previous shared icon if needed, to avoid future updates from it.
+            // remove the shared icon completely if no markers on it as well.
+            // this is to avoid memory leak due to orphan bitmaps.
+            //
+            // However in case where client want to update all markers from icon A to icon B
+            // and after some time to update back from icon B to icon A
+            // it may be better to keep it though. We assume that is rare.
+            if (this.imageUri != null) {
+                this.markerManager.getSharedIcon(this.imageUri).removeMarker(this);
+                this.markerManager.removeSharedIconIfEmpty(this.imageUri);
+            }
+            if (uri != null) {
+                // listening for marker bitmap descriptor update, as well as check whether to load the image.
+                MapMarkerManager.AirMapMarkerSharedIcon sharedIcon = this.markerManager.getSharedIcon(uri);
+                sharedIcon.addMarker(this);
+                shouldLoadImage = sharedIcon.shouldLoadImage();
+            }
+        }
+
+        this.imageUri = uri;
+        if (!shouldLoadImage) {
+            return;
+        }
+
+        if (uri == null) {
+            iconBitmapDescriptor = null;
+            update(true);
+        } else if (uri.startsWith("useCfMarker")) {
+            String jsonString = uri.split("JSON:")[1];
+            try {
+                JSONObject jsonObj = new JSONObject(jsonString);
+                String topOutline = jsonObj.getString("topOutline");
+                String bottomOutline = jsonObj.getString("bottomOutline");
+                String topInner = jsonObj.getString("topInner");
+                String bottomInner = jsonObj.getString("bottomInner");
+                String level = jsonObj.getString("level");
+                JSONObject promoted = jsonObj.getJSONObject("promoted");
+                String depotType = jsonObj.has("depotType") ? jsonObj.getString("depotType") : null;
+                Boolean isPromoted = new Boolean(promoted.getString("isPromoted"));
+                String promotedMarkerColor = promoted.getString("color");
+                PromotedMarkerArgStructure promotedMarkerArgs = new PromotedMarkerArgStructure(isPromoted, promotedMarkerColor);
+                String traffic = jsonObj.has("traffic") ? jsonObj.getString("traffic") : "0";
+                String zoomLevel = jsonObj.has("zoomLevel") ? jsonObj.getString("zoomLevel") : "16";
+                Boolean hasValetService = jsonObj.has("hasValetService") ? true : false;
+                JSONObject planned = jsonObj.has("planned") ? jsonObj.getJSONObject("planned") : null;
+                Boolean isPlanned = (planned != null && planned.has("isPlanned")) ? new Boolean(planned.getString("isPlanned")) : false;
+                String plannedMarkerOutlineColor = (planned != null) ? planned.getString("outlineColor") : "#D3D3D3";
+                String plannedMarkerFillColor = (planned != null) ? planned.getString("fillColor") : "#ffffff";
+                PlannedMarkerArgStructure plannedMarkerArgs = new PlannedMarkerArgStructure(isPlanned, plannedMarkerOutlineColor, plannedMarkerFillColor);
+                JSONObject maintenance = jsonObj.has("maintenance") ? jsonObj.getJSONObject("maintenance") : null;
+                Boolean isMaintenance = (maintenance != null && maintenance.has("isMaintenance")) ? new Boolean(maintenance.getString("isMaintenance")) : false;
+                String maintenanceMarkerOutlineColor = (maintenance != null) ? maintenance.getString("outlineColor") : "#D3D3D3";
+                String maintenanceMarkerFillColor = (maintenance != null) ? maintenance.getString("fillColor") : "#ffffff";
+                MaintenanceMarkerArgStructure maintenanceMarkerArgs = new MaintenanceMarkerArgStructure(isMaintenance, maintenanceMarkerOutlineColor, maintenanceMarkerFillColor);
+
+                String svgDataUri = getCFSvg(hasValetService, Math.round(Float.parseFloat(level)), topOutline, bottomOutline, topInner, bottomInner, promotedMarkerArgs, depotType, Float.parseFloat(traffic), Integer.valueOf(zoomLevel), plannedMarkerArgs, maintenanceMarkerArgs);
+                Log.d("CF Svg", svgDataUri);
+                ImageRequest imageRequest = ImageRequestBuilder
+                        .newBuilderWithSource(Uri.parse(svgDataUri))
+                        .setImageDecodeOptions(
+                                ImageDecodeOptions.newBuilder()
+                                        .setCustomImageDecoder(new SvgDecoder())
+                                        .build())
+                        .build();
+
+                ImagePipeline imagePipeline = Fresco.getImagePipeline();
+                DataSource<CloseableReference<CloseableImage>> requestDataSource =
+                        imagePipeline.fetchDecodedImage(imageRequest, this);
+                DraweeController controller = Fresco.newDraweeControllerBuilder()
+                        .setImageRequest(imageRequest)
+                        .setCustomDrawableFactory(new SvgDrawableFactory())
+                        .setControllerListener(createLogoControllerListener(uri, requestDataSource))
+                        .setOldController(logoHolder.getController())
+                        .build();
+                logoHolder.setController(controller);
+            } catch (JSONException e) {
+                Log.d("CF Svg", "unable to parse JSON");
+            }
+        } else if (uri.startsWith("http://") || uri.startsWith("https://") ||
+                uri.startsWith("file://") || uri.startsWith("asset://") || uri.startsWith("data:")) {
+            ImageRequest imageRequest = ImageRequestBuilder
+                    .newBuilderWithSource(Uri.parse(uri))
+                    .build();
+
+            ImagePipeline imagePipeline = Fresco.getImagePipeline();
+            DataSource<CloseableReference<CloseableImage>> requestDataSource =
+                    imagePipeline.fetchDecodedImage(imageRequest, this);
+            DraweeController controller = Fresco.newDraweeControllerBuilder()
+                    .setImageRequest(imageRequest)
+                    .setControllerListener(createLogoControllerListener(uri, requestDataSource))
+                    .setOldController(logoHolder.getController())
+                    .build();
+            logoHolder.setController(controller);
+        } else {
+            iconBitmapDescriptor = getBitmapDescriptorByName(uri);
+            int drawableId = getDrawableResourceByName(uri);
+            iconBitmap = BitmapFactory.decodeResource(getResources(), drawableId);
+            if (iconBitmap == null) { // VectorDrawable or similar
+                Drawable drawable = getResources().getDrawable(drawableId);
+                iconBitmap = Bitmap.createBitmap(drawable.getIntrinsicWidth(), drawable.getIntrinsicHeight(), Bitmap.Config.ARGB_8888);
+                drawable.setBounds(0, 0, drawable.getIntrinsicWidth(), drawable.getIntrinsicHeight());
+                Canvas canvas = new Canvas(iconBitmap);
+                drawable.draw(canvas);
+            }
+            if (this.markerManager != null) {
+                this.markerManager.getSharedIcon(uri).updateIcon(iconBitmapDescriptor, iconBitmap);
+            }
+            update(true);
+        }
+    }
 
   public String getCFSvg(Boolean hasValetService, Integer level,  String topOutline, String bottomOutline, String topInner, String bottomInner, PromotedMarkerArgStructure promotedMarkerArg, String depotType, Float traffic, Integer zoomLevel, PlannedMarkerArgStructure plannedMarkerArgs, MaintenanceMarkerArgStructure maintenanceMarkerArgs) {
     String topInnerEncoded = topInner.replace("#", "%23");
@@ -418,122 +765,6 @@ public class MapMarker extends MapFeature {
     return " ";
   }
 
-  public void setSnippet(String snippet) {
-    this.snippet = snippet;
-    if (marker != null) {
-      marker.setSnippet(snippet);
-    }
-    update(false);
-  }
-
-  public void setRotation(float rotation) {
-    this.rotation = rotation;
-    if (marker != null) {
-      marker.setRotation(rotation);
-    }
-    update(false);
-  }
-
-  public void setFlat(boolean flat) {
-    this.flat = flat;
-    if (marker != null) {
-      marker.setFlat(flat);
-    }
-    update(false);
-  }
-
-  public void setDraggable(boolean draggable) {
-    this.draggable = draggable;
-    if (marker != null) {
-      marker.setDraggable(draggable);
-    }
-    update(false);
-  }
-
-  public void setZIndex(int zIndex) {
-    this.zIndex = zIndex;
-    if (marker != null) {
-      marker.setZIndex(zIndex);
-    }
-    update(false);
-  }
-
-  public void setOpacity(float opacity) {
-    this.opacity = opacity;
-    if (marker != null) {
-      marker.setAlpha(opacity);
-    }
-    update(false);
-  }
-
-  public void setMarkerHue(float markerHue) {
-    this.markerHue = markerHue;
-    update(false);
-  }
-
-  public void setAnchor(double x, double y) {
-    anchorIsSet = true;
-    anchorX = (float) x;
-    anchorY = (float) y;
-    if (marker != null) {
-      marker.setAnchor(anchorX, anchorY);
-    }
-    update(false);
-  }
-
-  public void setCalloutAnchor(double x, double y) {
-    calloutAnchorIsSet = true;
-    calloutAnchorX = (float) x;
-    calloutAnchorY = (float) y;
-    if (marker != null) {
-      marker.setInfoWindowAnchor(calloutAnchorX, calloutAnchorY);
-    }
-    update(false);
-  }
-
-  public void setTracksViewChanges(boolean tracksViewChanges) {
-    this.tracksViewChanges = tracksViewChanges;
-    updateTracksViewChanges();
-  }
-
-  private void updateTracksViewChanges() {
-    boolean shouldTrack = tracksViewChanges && hasCustomMarkerView && marker != null;
-    if (shouldTrack == tracksViewChangesActive) return;
-    tracksViewChangesActive = shouldTrack;
-
-    if (shouldTrack) {
-      ViewChangesTracker.getInstance().addMarker(this);
-    } else {
-      ViewChangesTracker.getInstance().removeMarker(this);
-
-      // Let it render one more time to avoid race conditions.
-      // i.e. Image onLoad ->
-      //      ViewChangesTracker may not get a chance to render ->
-      //      setState({ tracksViewChanges: false }) ->
-      //      image loaded but not rendered.
-      updateMarkerIcon();
-    }
-  }
-
-  public LatLng getPosition() {
-    return position;
-  }
-
-  public boolean updateCustomForTracking() {
-    if (!tracksViewChangesActive)
-      return false;
-
-    updateMarkerIcon();
-
-    return true;
-  }
-
-  public void updateMarkerIcon() {
-    if (marker == null) return;
-
-    marker.setIcon(getIcon());
-  }
-
    public static class CloseableSvgImage implements CloseableImage {
     private Map<String, Object> mExtras = new HashMap<>();
 
@@ -655,28 +886,6 @@ public class MapMarker extends MapFeature {
     }
   }
 
-  public LatLng interpolate(float fraction, LatLng a, LatLng b) {
-    double lat = (b.latitude - a.latitude) * fraction + a.latitude;
-    double lng = (b.longitude - a.longitude) * fraction + a.longitude;
-    return new LatLng(lat, lng);
-  }
-
-  public void animateToCoodinate(LatLng finalPosition, Integer duration) {
-    TypeEvaluator<LatLng> typeEvaluator = new TypeEvaluator<LatLng>() {
-      @Override
-      public LatLng evaluate(float fraction, LatLng startValue, LatLng endValue) {
-        return interpolate(fraction, startValue, endValue);
-      }
-    };
-    Property<Marker, LatLng> property = Property.of(Marker.class, LatLng.class, "position");
-    ObjectAnimator animator = ObjectAnimator.ofObject(
-            marker,
-            property,
-            typeEvaluator,
-            finalPosition);
-    animator.setDuration(duration);
-    animator.start();
-  }
 
   public static class SvgDrawableFactory implements DrawableFactory {
 
@@ -788,364 +997,385 @@ public class MapMarker extends MapFeature {
       setPicture(mSvg.renderToPicture(bounds.width(), bounds.height()));
     }
   }
-
-  public void setImage(String uri) {
-
-    boolean shouldLoadImage = true;
-
-    if (this.markerManager != null) {
-      // remove marker from previous shared icon if needed, to avoid future updates from it.
-      // remove the shared icon completely if no markers on it as well.
-      // this is to avoid memory leak due to orphan bitmaps.
-      //
-      // However in case where client want to update all markers from icon A to icon B
-      // and after some time to update back from icon B to icon A
-      // it may be better to keep it though. We assume that is rare.
-      if (this.imageUri != null) {
-        this.markerManager.getSharedIcon(this.imageUri).removeMarker(this);
-        this.markerManager.removeSharedIconIfEmpty(this.imageUri);
-      }
-      if (uri != null) {
-        // listening for marker bitmap descriptor update, as well as check whether to load the image.
-        MapMarkerManager.AirMapMarkerSharedIcon sharedIcon = this.markerManager.getSharedIcon(uri);
-        sharedIcon.addMarker(this);
-        shouldLoadImage = sharedIcon.shouldLoadImage();
-      }
+    public void setIconBitmapDescriptor(BitmapDescriptor bitmapDescriptor, Bitmap bitmap) {
+        this.iconBitmapDescriptor = bitmapDescriptor;
+        this.iconBitmap = bitmap;
+        this.update(true);
     }
 
-    this.imageUri = uri;
-    if (!shouldLoadImage) {return;}
+    public void setIconBitmap(Bitmap bitmap) {
+        this.iconBitmap = bitmap;
+    }
 
-    Log.d("URI log", uri);
-
-    if (uri == null) {
-      iconBitmapDescriptor = null;
-      update(true);
-    } else if (uri.startsWith("http://") || uri.startsWith("https://") ||
-            uri.startsWith("file://") || uri.startsWith("asset://") || uri.startsWith("data:")) {
-      ImageRequest imageRequest = ImageRequestBuilder
-              .newBuilderWithSource(Uri.parse(uri))
-              .build();
-
-      ImagePipeline imagePipeline = Fresco.getImagePipeline();
-      dataSource = imagePipeline.fetchDecodedImage(imageRequest, this);
-      DraweeController controller = Fresco.newDraweeControllerBuilder()
-              .setImageRequest(imageRequest)
-              .setControllerListener(mLogoControllerListener)
-              .setOldController(logoHolder.getController())
-              .build();
-      logoHolder.setController(controller);
-    } else if(uri.startsWith("useCfMarker")) {
-      String jsonString = uri.split("JSON:")[1];
-
-      try {
-        JSONObject jsonObj = new JSONObject(jsonString);
-        String  topOutline = jsonObj.getString("topOutline");
-        String bottomOutline = jsonObj.getString("bottomOutline");
-        String  topInner = jsonObj.getString("topInner");
-        String bottomInner = jsonObj.getString("bottomInner");
-        String level = jsonObj.getString("level");
-        JSONObject promoted = jsonObj.getJSONObject("promoted");
-        String depotType = jsonObj.has("depotType") ? jsonObj.getString("depotType") : null;
-        Boolean isPromoted = new Boolean(promoted.getString("isPromoted"));
-        String promotedMarkerColor = promoted.getString("color");
-        PromotedMarkerArgStructure promotedMarkerArgs = new PromotedMarkerArgStructure(isPromoted, promotedMarkerColor);
-        String traffic = jsonObj.has("traffic") ? jsonObj.getString("traffic"): "0";
-        String zoomLevel = jsonObj.has("zoomLevel") ? jsonObj.getString("zoomLevel"): "16";
-        Boolean hasValetService = jsonObj.has("hasValetService") ? true: false;
-        JSONObject planned = jsonObj.has("planned") ? jsonObj.getJSONObject("planned") : null;
-        Boolean isPlanned = (planned != null && planned.has("isPlanned")) ? new Boolean(planned.getString("isPlanned")) :false;
-        String plannedMarkerOutlineColor = (planned != null) ? planned.getString("outlineColor") : "#D3D3D3"; // fallback to pale grey color
-        String plannedMarkerFillColor = (planned != null) ? planned.getString("fillColor") : "#ffffff"; // fallback to white color
-        PlannedMarkerArgStructure plannedMarkerArgs = new PlannedMarkerArgStructure(isPlanned, plannedMarkerOutlineColor, plannedMarkerFillColor);
-        JSONObject maintenance = jsonObj.has("maintenance") ? jsonObj.getJSONObject("maintenance") : null;
-        Boolean isMaintenance = (maintenance != null && maintenance.has("isMaintenance")) ? new Boolean(maintenance.getString("isMaintenance")) : false;
-        String maintenanceMarkerOutlineColor = (maintenance != null) ? maintenance.getString("outlineColor") : "#D3D3D3"; // fallback to pale grey color
-        String maintenanceMarkerFillColor = (maintenance != null) ? maintenance.getString("fillColor") : "#ffffff"; // fallback to white color;
-        MaintenanceMarkerArgStructure maintenanceMarkerArgs = new MaintenanceMarkerArgStructure(isMaintenance, maintenanceMarkerOutlineColor, maintenanceMarkerFillColor);
-
-        String svgDataUrI = getCFSvg(hasValetService, Math.round(Float.parseFloat(level)), topOutline, bottomOutline, topInner, bottomInner, promotedMarkerArgs, depotType, Float.parseFloat(traffic), Integer.valueOf(zoomLevel), plannedMarkerArgs, maintenanceMarkerArgs);
-        Log.d("JSONString", svgDataUrI);
-        ImageRequest imageRequest = ImageRequestBuilder
-                .newBuilderWithSource(Uri.parse(svgDataUrI))
-                .setImageDecodeOptions(
-                        ImageDecodeOptions.newBuilder()
-                                .setCustomImageDecoder(new SvgDecoder())
-                                .build())
-                .build();
-
-        ImagePipeline imagePipeline = Fresco.getImagePipeline();
-        dataSource = imagePipeline.fetchDecodedImage(imageRequest, this);
-        DraweeController controller = Fresco.newDraweeControllerBuilder()
-                .setImageRequest(imageRequest)
-                .setCustomDrawableFactory(new SvgDrawableFactory())
-                .setControllerListener(mLogoControllerListener)
-                .setOldController(logoHolder.getController())
-                .build();
-        logoHolder.setController(controller);
-      } catch (JSONException e) {
-        Log.d("CF Svg", "unable to parse JSON");
-      }
-    } else {
-      iconBitmapDescriptor = getBitmapDescriptorByName(uri);
-      if (iconBitmapDescriptor != null) {
-        int drawableId = getDrawableResourceByName(uri);
-        iconBitmap = BitmapFactory.decodeResource(getResources(), drawableId);
-        if (iconBitmap == null) { // VectorDrawable or similar
-          Drawable drawable = getResources().getDrawable(drawableId);
-          iconBitmap = Bitmap.createBitmap(drawable.getIntrinsicWidth(), drawable.getIntrinsicHeight(), Bitmap.Config.ARGB_8888);
-          drawable.setBounds(0, 0, drawable.getIntrinsicWidth(), drawable.getIntrinsicHeight());
-          Canvas canvas = new Canvas(iconBitmap);
-          drawable.draw(canvas);
+    public MarkerOptions getMarkerOptions() {
+        if (markerOptions == null) {
+            markerOptions = new MarkerOptions();
         }
-      }
-      if (this.markerManager != null) {
-        this.markerManager.getSharedIcon(uri).updateIcon(iconBitmapDescriptor, iconBitmap);
-      }
-      update(true);
-    }
-  }
 
-  public void setIconBitmapDescriptor(BitmapDescriptor bitmapDescriptor, Bitmap bitmap) {
-    this.iconBitmapDescriptor = bitmapDescriptor;
-    this.iconBitmap = bitmap;
-    this.update(true);
-  }
-
-  public void setIconBitmap(Bitmap bitmap) {
-    this.iconBitmap = bitmap;
-  }
-
-  public MarkerOptions getMarkerOptions() {
-    if (markerOptions == null) {
-      markerOptions = new MarkerOptions();
+        fillMarkerOptions(markerOptions);
+        return markerOptions;
     }
 
-    fillMarkerOptions(markerOptions);
-    return markerOptions;
-  }
-
-  @Override
-  public void addView(View child, int index) {
-    super.addView(child, index);
-    // if children are added, it means we are rendering a custom marker
-    if (!(child instanceof MapCallout)) {
-      hasCustomMarkerView = true;
-      updateTracksViewChanges();
-    }
-    update(true);
-  }
-
-  @Override
-  public void requestLayout() {
-    super.requestLayout();
-
-    if (getChildCount() == 0) {
-      if (hasCustomMarkerView) {
-        hasCustomMarkerView = false;
-        clearDrawableCache();
-        updateTracksViewChanges();
+    @Override
+    public void addView(View child, int index) {
+        super.addView(child, index);
+        // if children are added, it means we are rendering a custom marker
+        if (!(child instanceof MapCallout)) {
+            hasCustomMarkerView = true;
+            updateTracksViewChanges();
+            hackToHandleDraweeLifecycle(child);
+        }
         update(true);
-      }
-
     }
-  }
+    private void hackToHandleDraweeLifecycle(View child){
+        if (child instanceof DraweeView<?>) {
+            try {
+                DraweeView draweeView = (DraweeView) child;
 
-  @Override
-  public Object getFeature() {
-    return marker;
-  }
+                Method onAttachMethod = DraweeView.class.getDeclaredMethod("onAttachedToWindow");
+                onAttachMethod.setAccessible(true);
+                onAttachMethod.invoke(child);
 
-  @Override
-  public void addToMap(Object collection) {
-    MarkerManager.Collection markerCollection = (MarkerManager.Collection) collection;
-    marker = markerCollection.addMarker(getMarkerOptions());
-    updateTracksViewChanges();
-  }
+                Handler mainHandler = new Handler(Looper.getMainLooper());
 
-  @Override
-  public void removeFromMap(Object collection) {
-    if (marker == null) {
-      return;
-    }
-    MarkerManager.Collection markerCollection = (MarkerManager.Collection) collection;
-    markerCollection.remove(marker);
-    marker = null;
-    updateTracksViewChanges();
-  }
+                if (draweeView.getController() instanceof AbstractDraweeController<?,?>){
+                    AbstractDraweeController abstractController = (AbstractDraweeController) draweeView.getController();
 
-  private BitmapDescriptor getIcon() {
-    if (hasCustomMarkerView) {
-      // creating a bitmap from an arbitrary view
-      if (iconBitmapDescriptor != null) {
-        Bitmap viewBitmap = createDrawable();
-        int width = Math.max(iconBitmap.getWidth(), viewBitmap.getWidth());
-        int height = Math.max(iconBitmap.getHeight(), viewBitmap.getHeight());
-        Bitmap combinedBitmap = Bitmap.createBitmap(width, height, iconBitmap.getConfig());
-        Canvas canvas = new Canvas(combinedBitmap);
-        canvas.drawBitmap(iconBitmap, 0, 0, null);
-        canvas.drawBitmap(viewBitmap, 0, 0, null);
-        return BitmapDescriptorFactory.fromBitmap(combinedBitmap);
-      } else {
-        return BitmapDescriptorFactory.fromBitmap(createDrawable());
-      }
-    } else if (iconBitmapDescriptor != null) {
-      // use local image as a marker
-      return iconBitmapDescriptor;
-    } else {
-      // render the default marker pin
-      return BitmapDescriptorFactory.defaultMarker(this.markerHue);
-    }
-  }
+                    abstractController.addControllerListener2(new ControllerListener2() {
+                        @Override
+                        public void onSubmit(@NonNull String s, @Nullable Object o, @Nullable Extras extras) {
 
-  private MarkerOptions fillMarkerOptions(MarkerOptions options) {
-    options.position(position);
-    if (anchorIsSet) options.anchor(anchorX, anchorY);
-    if (calloutAnchorIsSet) options.infoWindowAnchor(calloutAnchorX, calloutAnchorY);
-    options.title(title);
-    options.snippet(snippet);
-    options.rotation(rotation);
-    options.flat(flat);
-    options.draggable(draggable);
-    options.zIndex(zIndex);
-    options.alpha(opacity);
-    options.icon(getIcon());
-    return options;
-  }
+                        }
 
-  public void update(boolean updateIcon) {
-    if (marker == null) {
-      return;
+                        @Override
+                        public void onFinalImageSet(@NonNull String s, @Nullable Object o, @Nullable Extras extras) {
+                            mainHandler.postDelayed(() -> update(true), ((GenericDraweeHierarchy) draweeView.getHierarchy()).getFadeDuration());
+                        }
+
+                        @Override
+                        public void onIntermediateImageSet(@NonNull String s, @Nullable Object o) {
+                            mainHandler.post(() -> update(true));
+                        }
+
+                        @Override
+                        public void onIntermediateImageFailed(@NonNull String s) {
+
+                        }
+
+                        @Override
+                        public void onFailure(@NonNull String s, @Nullable Throwable throwable, @Nullable Extras extras) {
+
+                        }
+
+                        @Override
+                        public void onRelease(@NonNull String s, @Nullable Extras extras) {
+
+                        }
+
+                        @Override
+                        public void onEmptyEvent(@Nullable Object o) {
+
+                        }
+                    });
+                }
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
     }
 
-    if (updateIcon)
-      updateMarkerIcon();
+    @Override
+    public void requestLayout() {
+        super.requestLayout();
 
-    if (anchorIsSet) {
-      marker.setAnchor(anchorX, anchorY);
-    } else {
-      marker.setAnchor(0.5f, 1.0f);
+        if (getChildCount() == 0) {
+            if (hasCustomMarkerView) {
+                hasCustomMarkerView = false;
+                clearDrawableCache();
+                updateTracksViewChanges();
+                update(true);
+            }
+        } else {
+            // custom subview
+            if (!(getChildAt(0) instanceof MapCallout)) {
+                if (updated == 0) {
+                    updated = 1;
+                    updateTracksViewChanges();
+                }
+            }
+        }
     }
 
-    if (calloutAnchorIsSet) {
-      marker.setInfoWindowAnchor(calloutAnchorX, calloutAnchorY);
-    } else {
-      marker.setInfoWindowAnchor(0.5f, 0);
-    }
-  }
-
-  public void update(int width, int height) {
-    this.width = width;
-    this.height = height;
-
-    update(true);
-  }
-
-  private Bitmap mLastBitmapCreated = null;
-
-  private void clearDrawableCache() {
-    mLastBitmapCreated = null;
-  }
-
-  private Bitmap createDrawable() {
-    int width = this.width <= 0 ? 100 : this.width;
-    int height = this.height <= 0 ? 100 : this.height;
-    this.buildDrawingCache();
-
-    // Do not create the doublebuffer-bitmap each time. reuse it to save memory.
-    Bitmap bitmap = mLastBitmapCreated;
-
-    if (bitmap == null ||
-            bitmap.isRecycled() ||
-            bitmap.getWidth() != width ||
-            bitmap.getHeight() != height) {
-      bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
-      mLastBitmapCreated = bitmap;
-    } else {
-      bitmap.eraseColor(Color.TRANSPARENT);
+    @Override
+    public Object getFeature() {
+        return marker;
     }
 
-    Canvas canvas = new Canvas(bitmap);
-    this.draw(canvas);
-
-    return bitmap;
-  }
-
-  public void setCalloutView(MapCallout view) {
-    this.calloutView = view;
-  }
-
-  public MapCallout getCalloutView() {
-    return this.calloutView;
-  }
-
-  public View getCallout() {
-    if (this.calloutView == null) return null;
-
-    if (this.wrappedCalloutView == null) {
-      this.wrapCalloutView();
+    @Override
+    public void addToMap(Object collection) {
+        MarkerManager.Collection markerCollection = (MarkerManager.Collection) collection;
+        marker = markerCollection.addMarker(getMarkerOptions());
+        this.markerCollectionRef = new SoftReference<>(markerCollection);
+        updateTracksViewChanges();
     }
 
-    if (this.calloutView.getTooltip()) {
-      return this.wrappedCalloutView;
-    } else {
-      return null;
-    }
-  }
-
-  public View getInfoContents() {
-    if (this.calloutView == null) return null;
-
-    if (this.wrappedCalloutView == null) {
-      this.wrapCalloutView();
+    @Override
+    public void removeFromMap(Object collection) {
+        if (marker == null) {
+            return;
+        }
+        MarkerManager.Collection markerCollection = (MarkerManager.Collection) collection;
+        markerCollection.remove(marker);
+        marker = null;
+        updateTracksViewChanges();
     }
 
-    if (this.calloutView.getTooltip()) {
-      return null;
-    } else {
-      return this.wrappedCalloutView;
+    private BitmapDescriptor getIcon() {
+        if (hasCustomMarkerView) {
+            // creating a bitmap from an arbitrary view
+            if (iconBitmapDescriptor != null) {
+                Bitmap viewBitmap = createDrawable();
+                int width = Math.max(iconBitmap.getWidth(), viewBitmap.getWidth());
+                int height = Math.max(iconBitmap.getHeight(), viewBitmap.getHeight());
+                Bitmap combinedBitmap = Bitmap.createBitmap(width, height, iconBitmap.getConfig());
+                Canvas canvas = new Canvas(combinedBitmap);
+                canvas.drawBitmap(iconBitmap, 0, 0, null);
+                canvas.drawBitmap(viewBitmap, 0, 0, null);
+                return BitmapDescriptorFactory.fromBitmap(combinedBitmap);
+            } else {
+                return BitmapDescriptorFactory.fromBitmap(createDrawable());
+            }
+        } else if (iconBitmapDescriptor != null) {
+            // use local image as a marker
+            return iconBitmapDescriptor;
+        } else {
+            // render the default marker pin
+            return BitmapDescriptorFactory.defaultMarker(this.markerHue);
+        }
     }
-  }
 
-  private void wrapCalloutView() {
-    // some hackery is needed to get the arbitrary infowindow view to render centered, and
-    // with only the width/height that it needs.
-    if (this.calloutView == null || this.calloutView.getChildCount() == 0) {
-      return;
+    private MarkerOptions fillMarkerOptions(MarkerOptions options) {
+        options.position(position);
+        if (anchorIsSet) options.anchor(anchorX, anchorY);
+        if (calloutAnchorIsSet) options.infoWindowAnchor(calloutAnchorX, calloutAnchorY);
+        options.title(title);
+        options.snippet(snippet);
+        options.rotation(rotation);
+        options.flat(flat);
+        options.draggable(draggable);
+        options.zIndex(zIndex);
+        options.alpha(opacity);
+        options.icon(getIcon());
+        return options;
     }
 
-    LinearLayout LL = new LinearLayout(context);
-    LL.setOrientation(LinearLayout.VERTICAL);
-    LL.setLayoutParams(new LinearLayout.LayoutParams(
-            this.calloutView.width,
-            this.calloutView.height,
-            0f
-    ));
+    public void update(boolean updateIcon) {
+        if (marker == null) {
+            return;
+        }
+
+        if (updateIcon)
+            updateMarkerIcon();
+
+        if (anchorIsSet) {
+            marker.setAnchor(anchorX, anchorY);
+        } else {
+            marker.setAnchor(0.5f, 1.0f);
+        }
+
+        if (calloutAnchorIsSet) {
+            marker.setInfoWindowAnchor(calloutAnchorX, calloutAnchorY);
+        } else {
+            marker.setInfoWindowAnchor(0.5f, 0);
+        }
+        updated += 1;
+    }
+
+    public void update(int width, int height) {
+        this.width = width;
+        this.height = height;
+        updated += 1;
+        updateTracksViewChanges();
+        clearDrawableCache();
+        update(true);
+    }
+
+    public void redraw() {
+        new Handler(Looper.getMainLooper()).post(new Runnable() {
+            @Override
+            public void run() {
+                updateMarkerIcon();
+            }
+        });
+    }
+
+    private Bitmap mLastBitmapCreated = null;
+
+    private void clearDrawableCache() {
+        mLastBitmapCreated = null;
+    }
+
+    private Bitmap createDrawable() {
+        int width = this.width <= 0 ? 100 : this.width;
+        int height = this.height <= 0 ? 100 : this.height;
+
+        // Do not create the doublebuffer-bitmap each time. reuse it to save memory.
+        Bitmap bitmap = mLastBitmapCreated;
+
+        if (bitmap == null ||
+                bitmap.isRecycled() ||
+                bitmap.getWidth() != width ||
+                bitmap.getHeight() != height) {
+            bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+            mLastBitmapCreated = bitmap;
+        } else {
+            bitmap.eraseColor(Color.TRANSPARENT);
+        }
+
+        Canvas canvas = new Canvas(bitmap);
+        this.draw(canvas);
+
+        return bitmap;
+    }
+
+    public void setCalloutView(MapCallout view) {
+        this.calloutView = view;
+    }
+
+    public MapCallout getCalloutView() {
+        return this.calloutView;
+    }
+
+    public View getCallout() {
+        if (this.calloutView == null) return null;
+
+        if (this.wrappedCalloutView == null) {
+            this.wrapCalloutView();
+        }
+
+        if (this.calloutView.getTooltip()) {
+            return this.wrappedCalloutView;
+        } else {
+            return null;
+        }
+    }
+
+    public View getInfoContents() {
+        if (this.calloutView == null) return null;
+
+        if (this.wrappedCalloutView == null) {
+            this.wrapCalloutView();
+        }
+
+        if (this.calloutView.getTooltip()) {
+            return null;
+        } else {
+            return this.wrappedCalloutView;
+        }
+    }
+
+    private void wrapCalloutView() {
+        // some hackery is needed to get the arbitrary infowindow view to render centered, and
+        // with only the width/height that it needs.
+        if (this.calloutView == null || this.calloutView.getChildCount() == 0) {
+            return;
+        }
+
+        LinearLayout LL = new LinearLayout(context);
+        LL.setOrientation(LinearLayout.VERTICAL);
+        LL.setLayoutParams(new LinearLayout.LayoutParams(
+                this.calloutView.width,
+                this.calloutView.height,
+                0f
+        ));
 
 
-    LinearLayout LL2 = new LinearLayout(context);
-    LL2.setOrientation(LinearLayout.HORIZONTAL);
-    LL2.setLayoutParams(new LinearLayout.LayoutParams(
-            this.calloutView.width,
-            this.calloutView.height,
-            0f
-    ));
+        LinearLayout LL2 = new LinearLayout(context);
+        LL2.setOrientation(LinearLayout.HORIZONTAL);
+        LL2.setLayoutParams(new LinearLayout.LayoutParams(
+                this.calloutView.width,
+                this.calloutView.height,
+                0f
+        ));
 
-    LL.addView(LL2);
-    LL2.addView(this.calloutView);
+        LL.addView(LL2);
+        LL2.addView(this.calloutView);
 
-    this.wrappedCalloutView = LL;
-  }
+        this.wrappedCalloutView = LL;
+    }
 
-  private int getDrawableResourceByName(String name) {
-    return getResources().getIdentifier(
-            name,
-            "drawable",
-            getContext().getPackageName());
-  }
+    private int getDrawableResourceByName(String name) {
+        return getResources().getIdentifier(
+                name,
+                "drawable",
+                getContext().getPackageName());
+    }
 
-  private BitmapDescriptor getBitmapDescriptorByName(String name) {
-    return BitmapDescriptorFactory.fromResource(getDrawableResourceByName(name));
-  }
+    public boolean isLoadingImage() {
+        return loadingImage;
+    }
 
+    public ImageManager.OnImageLoadedListener getImageLoadedListener() {
+        return imageLoadedListener;
+    }
+
+    public void setImageLoadedListener(ImageManager.OnImageLoadedListener imageLoadedListener) {
+        this.imageLoadedListener = imageLoadedListener;
+    }
+
+    public void setUpdated(boolean updated) {
+        if (updated) {
+            this.updated += 1;
+        } else {
+            this.updated = 0;
+        }
+    }
+
+    @FunctionalInterface
+    public interface EventCreator<T extends Event> {
+        T create(int surfaceId, int viewId, WritableMap payload);
+    }
+
+    public <T extends Event> void dispatchEvent(WritableMap payload, MapView.EventCreator<T> creator) {
+        // Cast context to ReactContext
+        ReactContext reactContext = (ReactContext) context;
+
+        // Get the event dispatcher
+        EventDispatcher eventDispatcher = UIManagerHelper.getEventDispatcherForReactTag(reactContext, getId());
+
+        // If there is a dispatcher, create and dispatch the event
+        if (eventDispatcher != null) {
+            int surfaceId = UIManagerHelper.getSurfaceId(reactContext);
+            T event = creator.create(surfaceId, getId(), payload);
+            eventDispatcher.dispatchEvent(event);
+        }
+    }
+
+    private BitmapDescriptor getBitmapDescriptorByName(String name) {
+        return BitmapDescriptorFactory.fromResource(getDrawableResourceByName(name));
+    }
+
+    public static Map<String, Object> getExportedCustomBubblingEventTypeConstants() {
+        MapBuilder.Builder<String, Object> builder = MapBuilder.builder();
+        builder.put(OnPressEvent.EVENT_NAME, MapBuilder.of("registrationName", OnPressEvent.EVENT_NAME));
+        return builder.build();
+    }
+
+    public static Map<String, Object> getExportedCustomDirectEventTypeConstants() {
+        return MapBuilder.of(
+                OnSelectEvent.EVENT_NAME, MapBuilder.of("registrationName", OnSelectEvent.EVENT_NAME),
+                OnDeselectEvent.EVENT_NAME, MapBuilder.of("registrationName", OnDeselectEvent.EVENT_NAME),
+                OnDragEvent.EVENT_NAME, MapBuilder.of("registrationName", OnDragEvent.EVENT_NAME),
+                OnDragStartEvent.EVENT_NAME, MapBuilder.of("registrationName", OnDragStartEvent.EVENT_NAME),
+                OnDragEndEvent.EVENT_NAME, MapBuilder.of("registrationName", OnDragEndEvent.EVENT_NAME)
+        );
+    }
+
+    @Override
+    protected void onLayout(boolean changed, int l, int t, int r, int b) {
+        super.onLayout(changed, l, t, r, b);
+        this.height = b - t;
+        this.width = r - l;
+    }
 }

@@ -1,7 +1,7 @@
 import type {HostComponent} from 'react-native';
-import codegenNativeCommands from 'react-native/Libraries/Utilities/codegenNativeCommands';
-import {NativeProps} from './MapMarker';
-import {LatLng} from './sharedTypes';
+import {codegenNativeCommands} from 'react-native';
+import type {NativeProps} from './MapMarker';
+import type {LatLng} from './sharedTypes';
 
 export type MapMarkerNativeComponentType = HostComponent<NativeProps>;
 
@@ -45,9 +45,8 @@ export const Commands: NativeCommands = codegenNativeCommands<NativeCommands>({
   supportedCommands: [
     'showCallout',
     'hideCallout',
-    'redrawCallout',
     'animateMarkerToCoordinate',
-    'redraw',
     'setCoordinates',
+    'redraw',
   ],
 });

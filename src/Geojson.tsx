@@ -1,5 +1,5 @@
 import * as React from 'react';
-import {
+import type {
   Feature,
   FeatureCollection,
   Point,
@@ -10,12 +10,12 @@ import {
   Polygon,
   MultiPolygon,
 } from 'geojson';
-import Marker, {MapMarkerProps as MarkerProps} from './MapMarker';
-import {MapPolygonProps as PolygonProps} from './MapPolygon';
-import {MapPolylineProps as PolylineProps} from './MapPolyline';
+import Marker, {type MapMarkerProps as MarkerProps} from './MapMarker';
+import type {MapPolygonProps as PolygonProps} from './MapPolygon';
+import type {MapPolylineProps as PolylineProps} from './MapPolyline';
 import Polyline from './MapPolyline';
 import MapPolygon from './MapPolygon';
-import {LatLng} from './sharedTypes';
+import type {LatLng} from './sharedTypes';
 
 export type GeojsonProps = {
   /**
@@ -439,18 +439,21 @@ const getColor = (
   overlay: Overlay,
   colorType: string,
 ) => {
-  if (prop) {
-    return prop;
-  }
   let color = overlay.feature.properties?.[colorType];
+
   if (color) {
     const opacityProperty = colorType + '-opacity';
     const alpha = overlay.feature.properties?.[opacityProperty];
+
     if (alpha && alpha !== '0' && color[0] === '#') {
       color = getRgbaFromHex(color, alpha);
     }
+
     return color;
+  } else if (prop) {
+    return prop;
   }
+
   return undefined;
 };
 
@@ -458,10 +461,7 @@ const getStrokeWidth = (
   prop: GeojsonProps['strokeWidth'],
   overlay: Overlay,
 ) => {
-  if (prop) {
-    return prop;
-  }
-  return overlay.feature.properties?.['stroke-width'];
+  return overlay.feature.properties?.['stroke-width'] ?? prop;
 };
 
 // GeoJSON.Feature type-guards

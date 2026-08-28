@@ -96,7 +96,7 @@ public class MapMarkerManager extends ViewGroupManager<MapMarker> {
         public synchronized void updateIcon(BitmapDescriptor bitmapDescriptor, Bitmap bitmap) {
 
             this.iconBitmapDescriptor = bitmapDescriptor;
-            this.bitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true);
+            this.bitmap = bitmap != null ? bitmap.copy(Bitmap.Config.ARGB_8888, true) : null;
 
             if (this.markers.isEmpty()) {
                 return;
@@ -330,11 +330,12 @@ public class MapMarkerManager extends ViewGroupManager<MapMarker> {
     @Nullable
     public Map getExportedCustomDirectEventTypeConstants() {
         return MapBuilder.<String, Map<String, String>>builder()
-                .put("onPress", MapBuilder.of("registrationName", "onPress"))
                 .put("onCalloutPress", MapBuilder.of("registrationName", "onCalloutPress"))
                 .put("onDragStart", MapBuilder.of("registrationName", "onDragStart"))
                 .put("onDrag", MapBuilder.of("registrationName", "onDrag"))
                 .put("onDragEnd", MapBuilder.of("registrationName", "onDragEnd"))
+                .put("onSelect", MapBuilder.of("registrationName", "onSelect"))
+                .put("onDeselect", MapBuilder.of("registrationName", "onDeselect"))
                 .build();
     }
 
@@ -342,8 +343,7 @@ public class MapMarkerManager extends ViewGroupManager<MapMarker> {
     @Nullable
     public Map getExportedCustomBubblingEventTypeConstants() {
         return MapBuilder.<String, Map<String, Object>>builder()
-                .put("onSelect", MapBuilder.of("phasedRegistrationNames", MapBuilder.of("bubbled", "onSelect")))
-                .put("onDeselect", MapBuilder.of("phasedRegistrationNames", MapBuilder.of("bubbled", "onDeselect")))
+                .put("onPress", MapBuilder.of("phasedRegistrationNames", MapBuilder.of("bubbled", "onPress")))
                 .build();
     }
 

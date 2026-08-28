@@ -1,70 +1,99 @@
-import React, {useState, useRef} from 'react';
-import {View, Text, TouchableOpacity, StyleSheet, Platform} from 'react-native';
-import MapView, {Marker} from 'react-native-maps';
-import {AnimatedRegion} from 'react-native-maps';
+import React from 'react';
+import {
+  StyleSheet,
+  View,
+  Text,
+  Dimensions,
+  TouchableOpacity,
+  Platform,
+} from 'react-native';
 
-const LATITUDE = 37.78825; // example value
-const LONGITUDE = -122.4324; // example value
-const LATITUDE_DELTA = 0.0922; // example value
-const LONGITUDE_DELTA = 0.0421; // example value
+import MapView, {Marker, AnimatedRegion} from 'react-native-maps';
 
-// prettier-ignore
-const AnimatedMarkers = ({provider}: {provider: any}) => {
-  const [coordinate, setCoordinate] = useState(
-    new AnimatedRegion({
-      latitude: LATITUDE,
-      longitude: LONGITUDE,
-    })
-  );
+const screen = Dimensions.get('window');
 
-  const markerRef = useRef<any>(null);
+const ASPECT_RATIO = screen.width / screen.height;
+const LATITUDE = 37.78825;
+const LONGITUDE = -122.4324;
+const LATITUDE_DELTA = 0.0922;
+const LONGITUDE_DELTA = LATITUDE_DELTA * ASPECT_RATIO;
 
-  const animate = () => {
+class AnimatedMarkers extends React.Component<any, any> {
+  marker: any;
+  constructor(props: any) {
+    super(props);
+
+    this.state = {
+      supported: false,
+      coordinate: new AnimatedRegion({
+        latitude: LATITUDE,
+        longitude: LONGITUDE,
+      }),
+    };
+  }
+
+  animate() {
+    const {coordinate} = this.state;
     const newCoordinate = {
       latitude: LATITUDE + (Math.random() - 0.5) * (LATITUDE_DELTA / 2),
       longitude: LONGITUDE + (Math.random() - 0.5) * (LONGITUDE_DELTA / 2),
     };
 
     if (Platform.OS === 'android') {
-      if (markerRef.current) {
-        markerRef.current._component.animateMarkerToCoordinate(newCoordinate, 500);
+      if (this.marker) {
+        this.marker._component.animateMarkerToCoordinate(newCoordinate, 500);
       }
     } else {
       // `useNativeDriver` defaults to false if not passed explicitly
       coordinate.timing({...newCoordinate, useNativeDriver: true}).start();
     }
-  };
+  }
 
-  return (
-    <View style={styles.container}>
-      <MapView
-        provider={provider}
-        style={styles.map}
-        initialRegion={{
-          latitude: LATITUDE,
-          longitude: LONGITUDE,
-          latitudeDelta: LATITUDE_DELTA,
-          longitudeDelta: LONGITUDE_DELTA,
-        }}
-      >
-        <Marker.Animated
-          ref={markerRef}
-          coordinate={coordinate}
-        />
-      </MapView>
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity
-          onPress={animate}
-          style={[styles.bubble, styles.button]}
-        >
-          <Text>Animate</Text>
-        </TouchableOpacity>
+  render() {
+    const {supported} = this.state;
+    if (!supported) {
+      return (
+        <View style={styles.error}>
+          <Text>Animation is Not Available for Fabric Map yet</Text>
+        </View>
+      );
+    }
+    return (
+      <View style={styles.container}>
+        <MapView
+          provider={this.props.provider}
+          style={styles.map}
+          initialRegion={{
+            latitude: LATITUDE,
+            longitude: LONGITUDE,
+            latitudeDelta: LATITUDE_DELTA,
+            longitudeDelta: LONGITUDE_DELTA,
+          }}>
+          <Marker
+            ref={(marker: any) => {
+              this.marker = marker;
+            }}
+            coordinate={this.state.coordinate}
+          />
+        </MapView>
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity
+            onPress={() => this.animate()}
+            style={[styles.bubble, styles.button]}>
+            <Text>Animate</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
-  );
-};
+    );
+  }
+}
 
 const styles = StyleSheet.create({
+  error: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   container: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'flex-end',
