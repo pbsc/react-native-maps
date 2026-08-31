@@ -26,7 +26,45 @@ CGRect unionRect(CGRect a, CGRect b) {
                       MAX(a.size.height, b.size.height));
 }
 
+// ============================================================================
+// PBSC PATCH - CLEANUP WHEN UPSTREAM LANDS A FIX. Check on upgrade:
+//   https://github.com/react-native-maps/react-native-maps/pull/5966
+//   https://github.com/react-native-maps/react-native-maps/issues/5971
+// When bumping react-native-maps past whatever version merges #5966 (or an
+// equivalent official fix for the 0x0 iconView bug), diff this file against
+// the new upstream AIRGoogleMapMarker.m and remove whatever it already
+// covers:
+//   - layoutSubviews' v.bounds.size measurement (matches #5966 exactly - just
+//     delete our copy once upstream has it).
+//   - the layoutSubviews calls added to didInsertInMap: and
+//     iconViewInsertSubview: (also matches #5966 - delete once upstream has
+//     it).
+//   - airMapsFitIconViewWithAttemptsRemaining: and its call sites (our own
+//     safety-net retry loop, not part of #5966 - keep only if still needed
+//     after confirming the upstream fix's timing is sufficient on real
+//     devices, otherwise delete along with kAIRGoogleMapMarkerIconFitMaxAttempts
+//     and the @interface forward declaration below).
+//   - the `redraw` call added at the end of didInsertInMap: (handles marker
+//     re-attachment, e.g. after a zIndex change - #5966 does NOT cover this;
+//     check whether the upstream fix (or a newer issue/PR) covers it before
+//     assuming it's safe to delete too).
+// ============================================================================
+//
+// Under Fabric, a custom marker child (View/SVG) can be mounted into _iconView
+// before React Native's own layout pass has given it a real, non-zero frame -
+// GMSMarker then snapshots an empty icon and never re-checks it, since nothing
+// tells it the content changed later. This is the same root cause reported in
+// react-native-maps/react-native-maps#5971, #5406, #5964, and fixed for one
+// production user by PR #5966 (re-measure layoutSubviews once now plus once on
+// the next run loop turn, which is the primary fix applied throughout this
+// file). This retry loop is only a safety net for slower devices where even
+// #5966's fixed two-pass timing might still see a not-yet-laid-out child - it
+// keeps re-measuring for a few more run-loop turns before giving up. Upstream
+// has no official/merged fix yet.
+static const NSInteger kAIRGoogleMapMarkerIconFitMaxAttempts = 4;
+
 @interface AIRGoogleMapMarker ()
+- (void)airMapsFitIconViewWithAttemptsRemaining:(NSInteger)attemptsRemaining;
 @end
 
 @implementation AIRGoogleMapMarker {
@@ -68,8 +106,11 @@ CGRect unionRect(CGRect a, CGRect b) {
 
     for (UIView *v in [_iconView subviews]) {
 
-        float fw = v.frame.origin.x + v.frame.size.width;
-        float fh = v.frame.origin.y + v.frame.size.height;
+        // frame includes a UIView transform. Custom markers can be scaled by
+        // Reanimated while entering, so use the stable layout bounds instead
+        // (react-native-maps/react-native-maps#5966).
+        float fw = v.bounds.size.width;
+        float fh = v.bounds.size.height;
 
         width = MAX(fw, width);
         height = MAX(fh, height);
@@ -158,17 +199,70 @@ CGRect unionRect(CGRect a, CGRect b) {
     } else if (_iconSrc) {
         [self setIconSrc:_iconSrc];
     }
+    // Size _iconView before attaching to the map: once, now, and once more on
+    // the next run loop turn since Fabric lays out children asynchronously
+    // and may not have finished yet (react-native-maps/react-native-maps#5966).
+    [self layoutSubviews];
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self layoutSubviews];
+    });
     [_realMarker setMap:map];
+
+    // A marker can be reinserted into the map without a fresh iconView (e.g. a
+    // zIndex change forces Fabric to remove+reinsert it) - GMSMarker only
+    // rasterizes iconView content while attached to a map, so force a redraw
+    // now that it is, in case the last snapshot (if any) was already stale.
+    // #5966 doesn't cover this reattachment case; it only re-measures before a
+    // marker's first attachment.
+    if (_iconView && _realMarker.iconView) {
+        [self redraw];
+    }
 }
 
 - (void)iconViewInsertSubview:(UIView*)subview atIndex:(NSInteger)atIndex {
     if (!_iconView){
         _iconView = [[UIView alloc] init];
     }
+    [_iconView insertSubview:subview atIndex:atIndex];
+    // Size _iconView to fit its children before setting it on the marker
+    // (react-native-maps/react-native-maps#5966).
+    [self layoutSubviews];
     if (!_realMarker.iconView) {
         _realMarker.iconView = _iconView;
     }
-    [_iconView insertSubview:subview atIndex:atIndex];
+    // Fabric lays out children asynchronously, so measure once more next run
+    // loop (#5966). That alone was sufficient in #5966's own production report,
+    // but keep retrying a few more turns as a safety net for slower devices
+    // where even a second pass might still see a not-yet-laid-out child.
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self layoutSubviews];
+        [self airMapsFitIconViewWithAttemptsRemaining:kAIRGoogleMapMarkerIconFitMaxAttempts];
+    });
+}
+
+// See the comment on kAIRGoogleMapMarkerIconFitMaxAttempts above.
+- (void)airMapsFitIconViewWithAttemptsRemaining:(NSInteger)attemptsRemaining {
+    if (!_iconView) return;
+
+    BOOL hasNonZeroSubview = NO;
+    for (UIView *v in [_iconView subviews]) {
+        if (v.bounds.size.width > 0 && v.bounds.size.height > 0) {
+            hasNonZeroSubview = YES;
+            break;
+        }
+    }
+
+    if (hasNonZeroSubview || attemptsRemaining <= 0) {
+        return;
+    }
+
+    __weak AIRGoogleMapMarker *weakSelf = self;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        __strong AIRGoogleMapMarker *strongSelf = weakSelf;
+        if (!strongSelf) return;
+        [strongSelf layoutSubviews];
+        [strongSelf airMapsFitIconViewWithAttemptsRemaining:attemptsRemaining - 1];
+    });
 }
 
 - (void)insertReactSubview:(id<RCTComponent>)subview atIndex:(NSInteger)atIndex {
